@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Sep 18, 2025 at 02:32 PM
+-- Generation Time: Sep 23, 2025 at 02:13 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -65,13 +65,7 @@ CREATE TABLE `booking` (
 --
 
 INSERT INTO `booking` (`BOOK_ID`, `VEHICLE_ID`, `EMAIL`, `BOOK_PLACE`, `BOOK_DATE`, `DURATION`, `PHONE_NUMBER`, `DESTINATION`, `RETURN_DATE`, `PRICE`, `BOOK_STATUS`, `FINE`) VALUES
-(82, 2, 'thomasbhattarai@gmail.com', 'Bhaktapur', '2025-09-17', 15, 9860741579, 'Bhaktapur', '2025-10-02', 94500, 'Canceled', 0.00),
-(83, 2, 'thomasbhattarai@gmail.com', 'Bhaktapur', '2025-09-30', 11, 9860741579, 'Bhaktapur', '2025-10-11', 69300, 'UNDER PROCESSING', 0.00),
-(84, 2, 'thomasbhattarai@gmail.com', 'Bhaktapur', '2025-09-24', 3, 9860741579, 'Bhaktapur', '2025-09-27', 19950, 'UNDER PROCESSING', 0.00),
-(85, 22, 'thomasbhattarai@gmail.com', 'Bhaktapur', '2025-09-17', 10, 9860741579, 'Bhaktapur', '2025-09-27', 1800, 'UNDER PROCESSING', 0.00),
-(86, 25, 'thomasbhattarai@gmail.com', 'Bhaktapur', '2025-09-16', 3, 9860741579, 'Bhaktapur', '2025-09-19', 4845, 'UNDER PROCESSING', 0.00),
-(87, 25, 'thomasbhattarai@gmail.com', 'Bhaktapur', '2025-09-16', 3, 9860741579, 'Bhaktapur', '2025-09-19', 4845, 'UNDER PROCESSING', 0.00),
-(88, 26, 'thomasbhattarai@gmail.com', 'Bhaktapur', '2025-09-18', 10, 9860741579, 'Bhaktapur', '2025-09-28', 7020, 'UNDER PROCESSING', 0.00);
+(91, 35, 'swosti@gmail.com', 'bhaktapur', '2025-09-26', 4, 9874563210, 'kathmandu', '2025-09-30', 2470, 'APPROVED', 0.00);
 
 -- --------------------------------------------------------
 
@@ -106,13 +100,6 @@ CREATE TABLE `payment` (
   `CVV` int(11) NOT NULL,
   `PRICE` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `payment`
---
-
-INSERT INTO `payment` (`PAY_ID`, `BOOK_ID`, `CARD_NO`, `EXP_DATE`, `CVV`, `PRICE`) VALUES
-(35, 82, '1111-11111-11111', '11/11', 111, 94500);
 
 -- --------------------------------------------------------
 
@@ -161,14 +148,36 @@ CREATE TABLE `vehicles` (
 --
 
 INSERT INTO `vehicles` (`VEHICLE_ID`, `VEHICLE_NAME`, `VEHICLE_TYPE`, `FUEL_TYPE`, `CAPACITY`, `PRICE`, `VEHICLE_IMG`, `AVAILABLE`) VALUES
-(2, 'LAMBORGINI', 'Car', 'DEISEL', 6, 7000, 'lamborghini.webp', 'Y'),
-(3, 'PORSCHE', 'Car', 'GAS', 4, 3000, 'porsche.jpg', 'N'),
-(21, 'Harley Davidson', 'Motorbike', 'Petrol', 2, 500, 'harley_davidson.jpg', 'Y'),
-(22, 'Yamaha R15', 'Motorbike', 'Petrol', 2, 200, 'yamaha_r15.jpg', 'Y'),
-(23, 'Harley', 'Bike', 'Petrol', 2, 1700, 'IMG-68c915a9403936.26450202.jpg', 'Y'),
-(24, 'Yamaha', 'Scooter', 'Petrol', 1, 990, 'IMG-68c915d52337d5.59492163.jpg', 'Y'),
-(25, 'Yamaha rayzr', 'Scooter', 'Petrol', 1, 1700, 'IMG-68c918c00b9c04.60345530.jpg', 'Y'),
-(26, 'Yamaha', 'Scooter', 'Petrol', 2, 780, 'IMG-68c919d64bcd89.68745596.jpeg', 'Y');
+(28, 'Aprilia', 'Scooter', 'Petrol', 2, 500, 'IMG-68d27140de4b71.38753356.png', 'Y'),
+(29, 'Komaki', 'Scooter', 'Petrol', 2, 550, 'IMG-68d27179bfac42.60699057.png', 'Y'),
+(30, 'Komaki-Ly', 'Scooter', 'Petrol', 2, 600, 'IMG-68d271a5a5fae8.22353209.png', 'Y'),
+(31, 'TVS-ev', 'Scooter', 'EV', 2, 450, 'IMG-68d271cdc52c43.55289021.png', 'Y'),
+(32, 'Vespa', 'Scooter', 'Petrol', 2, 600, 'IMG-68d271f7e09343.99123146.png', 'Y'),
+(33, 'TVS-ntorq', 'Scooter', 'Petrol', 2, 700, 'IMG-68d273f7a10c04.37367873.png', 'Y'),
+(34, 'TVS-jupitor', 'Scooter', 'Petrol', 2, 550, 'IMG-68d27425a2b369.03295970.png', 'Y'),
+(35, 'Yamaha-Ray-zr', 'Scooter', 'Petrol', 2, 650, 'IMG-68d27445237254.13049238.png', 'Y'),
+(36, 'Aprilia-xr', 'Scooter', 'Petrol', 2, 500, 'IMG-68d2745f8c10f8.30582514.png', 'Y'),
+(37, 'Yamaha-aerox', 'Scooter', 'Petrol', 2, 550, 'IMG-68d2748c219654.03920387.png', 'Y'),
+(38, 'Royal Enfield', 'Bike', 'Petrol', 2, 1000, 'IMG-68d277e81330c5.79759855.png', 'Y'),
+(39, 'MT15', 'Bike', 'Petrol', 2, 1100, 'IMG-68d27863540695.98658714.png', 'Y'),
+(40, 'R15M', 'Bike', 'Petrol', 2, 900, 'IMG-68d2787fb3c797.75346386.png', 'Y'),
+(41, 'Harley Davidson', 'Bike', 'Petrol', 2, 1100, 'IMG-68d278a48a8126.63581138.png', 'Y'),
+(42, 'TVS Apache', 'Bike', 'Petrol', 2, 800, 'IMG-68d278c4818cd7.97945436.png', 'Y'),
+(43, 'FZ Yamaha', 'Bike', 'Petrol', 2, 750, 'IMG-68d27a31361b06.26450099.png', 'Y'),
+(44, 'Honda', 'Bike', 'Petrol', 2, 1200, 'IMG-68d27a4a69d145.24807193.png', 'Y'),
+(45, 'KTM', 'Bike', 'Petrol', 2, 860, 'IMG-68d27aa2624f40.14606218.png', 'Y'),
+(46, 'NS Pulser', 'Bike', 'Petrol', 2, 850, 'IMG-68d27abdb3b287.57395677.png', 'Y'),
+(47, 'Royal Enfield Himalayan', 'Bike', 'Petrol', 2, 1250, 'IMG-68d27ae9338170.84666158.png', 'Y'),
+(48, 'BYD Dolphin', 'Car', 'EV', 4, 1900, 'IMG-68d27cbe947cf5.78627318.png', 'Y'),
+(49, 'Hyundai', 'Car', 'Diesel', 4, 2000, 'IMG-68d27d556d5aa6.46888955.png', 'Y'),
+(50, 'Renault KWID', 'Car', 'Petrol', 4, 2100, 'IMG-68d27d8c601400.91573840.png', 'Y'),
+(51, 'Proton emas', 'Car', 'EV', 4, 1800, 'IMG-68d27dc0d37149.67229036.png', 'Y'),
+(52, 'Sujuki Swift', 'Car', 'Petrol', 4, 2500, 'IMG-68d27def0f1141.32474626.png', 'Y'),
+(53, 'BYD Atto3', 'Car', 'EV', 4, 2100, 'IMG-68d27f65049b99.57289799.png', 'Y'),
+(54, 'Deepal L07', 'Car', 'EV', 4, 2500, 'IMG-68d27f8a916543.55769829.png', 'Y'),
+(55, 'Omoda E5', 'Car', 'EV', 4, 2400, 'IMG-68d27faeaca2e7.96686252.png', 'Y'),
+(56, 'Tata punch', 'Car', 'EV', 4, 2200, 'IMG-68d27fcd69f761.28358486.png', 'Y'),
+(57, 'Toyota LC', 'Car', 'Petrol/Diesel', 6, 4500, 'IMG-68d28036c892c7.23899560.png', 'Y');
 
 --
 -- Indexes for dumped tables
@@ -222,7 +231,7 @@ ALTER TABLE `vehicles`
 -- AUTO_INCREMENT for table `booking`
 --
 ALTER TABLE `booking`
-  MODIFY `BOOK_ID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=89;
+  MODIFY `BOOK_ID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=92;
 
 --
 -- AUTO_INCREMENT for table `feedback`
@@ -240,7 +249,7 @@ ALTER TABLE `payment`
 -- AUTO_INCREMENT for table `vehicles`
 --
 ALTER TABLE `vehicles`
-  MODIFY `VEHICLE_ID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=27;
+  MODIFY `VEHICLE_ID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=58;
 
 --
 -- Constraints for dumped tables
