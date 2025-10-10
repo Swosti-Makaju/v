@@ -44,24 +44,8 @@ function calculateDynamicPrice($base_price, $booking_date, $duration, $vehicle_t
         $duration_factor = 0.95; // 5% discount for bookings of 3-6 days
     }
 
-    // Vehicle Type Factor: Adjust based on vehicle category
-    $vehicle_type_factor = 1.0;
-    switch ($vehicle_type) {
-        case 'Luxury':
-            $vehicle_type_factor = 1.5; // 50% increase for luxury vehicles
-            break;
-        case 'SUV':
-            $vehicle_type_factor = 1.2; // 20% increase for SUVs
-            break;
-        case 'Economy':
-            $vehicle_type_factor = 0.9; // 10% discount for economy vehicles
-            break;
-        default:
-            $vehicle_type_factor = 1.0; // Default (no adjustment)
-    }
-
     // Calculate final price
-    $dynamic_price = $base_price * $demand_factor * $seasonal_factor * $duration_factor * $vehicle_type_factor;
+    $dynamic_price = $base_price * $demand_factor * $seasonal_factor * $duration_factor;
     return round($dynamic_price, 2);
 }
 
@@ -82,17 +66,24 @@ if (isset($_POST['book'])) {
             $dynamic_price = calculateDynamicPrice($base_price, $bdate, $dur, $vehicle_type);
             $total_price = $dynamic_price * $dur;
 
-            $sql = "INSERT INTO booking (VEHICLE_ID, EMAIL, BOOK_PLACE, BOOK_DATE, DURATION, PHONE_NUMBER, DESTINATION, PRICE, RETURN_DATE) VALUES ($vehicleid, '$uemail', '$bplace', '$bdate', $dur, '$phno', '$des', $total_price, '$rdate')";
-            $result = mysqli_query($con, $sql);
-
-            if ($result) {
-                $_SESSION['booking_id'] = mysqli_insert_id($con); // Store booking ID for payment
-                $_SESSION['total_price'] = $total_price; // Store the calculated total price
-                header("Location: esewa-intregation.php");
-                exit();
-            } else {
-                echo '<script>alert("Please check the connection")</script>';
-            }
+            // Store booking data in session instead of inserting into database
+            $_SESSION['pending_booking'] = [
+                'vehicle_id' => $vehicleid,
+                'email' => $uemail,
+                'book_place' => $bplace,
+                'book_date' => $bdate,
+                'duration' => $dur,
+                'phone_number' => $phno,
+                'destination' => $des,
+                'price' => $total_price,
+                'return_date' => $rdate,
+                'vehicle_name' => $vehicle['VEHICLE_NAME']
+            ];
+            
+            $_SESSION['total_price'] = $total_price;
+            
+            header("Location: esewa-intregation.php");
+            exit();
         } else {
             echo '<script>alert("Please enter a correct return date")</script>';
         }
@@ -131,6 +122,46 @@ if (isset($_POST['book'])) {
             display: flex;
             align-items: center;
         }
+        
+        .note {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 5px;
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 14px;
+            color: #856404;
+        }
+        
+        .btnn {
+            background: linear-gradient(45deg, #FF6B6B, #EE5A24);
+            border: none;
+            color: white;
+            padding: 12px 30px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btnn:hover {
+            background: linear-gradient(45deg, #EE5A24, #FF6B6B);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        .price-display {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 10px 15px;
+            font-size: 16px;
+            color: #495057;
+            margin-bottom: 15px;
+        }
+
+     
     </style>
 </head>
 
@@ -143,14 +174,14 @@ if (isset($_POST['book'])) {
             <h2>BOOKING</h2>
             <form id="register" method="POST">
                 <h2>VEHICLE NAME: <?php echo htmlspecialchars($vehicle['VEHICLE_NAME']); ?></h2>
-                <div class="price-box">
-                    <p><label>Base Price per Day:</label> Rs.<?php echo number_format($base_price, 2); ?></p>
-                    <p><label>Total Price:</label> <span id="total-price">Select valid dates to see total price</span>
-                    </p>
+                
+                <label for="baseprice">BASE PRICE PER DAY:</label>
+                <div class="price-display">
+                    Rs.<?php echo number_format($base_price, 2); ?>
                 </div>
 
                 <label for="place">BOOKING PLACE:</label>
-                <input type="text" name="place" id="place" placeholder="Enter Your Destination" required>
+                <input type="text" name="place" id="place" placeholder="Enter Booking Place" required>
 
                 <label for="date">BOOKING DATE:</label>
                 <input type="date" name="date" id="datefield" required onchange="updatePriceAndDuration()">
@@ -167,7 +198,12 @@ if (isset($_POST['book'])) {
                 <label for="des">DESTINATION:</label>
                 <input type="text" name="des" id="des" placeholder="Enter Your Destination" required>
 
-                <input type="submit" class="btnn" value="BOOK" name="book">
+                <label for="totalprice">TOTAL PRICE:</label>
+                <div class="price-display" id="total-price">
+                    Select valid dates to see total price
+                </div>
+
+                <input type="submit" class="btnn" value="PROCEED TO PAYMENT" name="book">
             </form>
         </div>
     </div>
@@ -196,24 +232,8 @@ if (isset($_POST['book'])) {
                 durationFactor = 0.95;
             }
 
-            // Vehicle Type Factor
-            let vehicleTypeFactor = 1.0;
-            switch (vehicleType) {
-                case 'Luxury':
-                    vehicleTypeFactor = 1.5;
-                    break;
-                case 'SUV':
-                    vehicleTypeFactor = 1.2;
-                    break;
-                case 'Economy':
-                    vehicleTypeFactor = 0.9;
-                    break;
-                default:
-                    vehicleTypeFactor = 1.0;
-            }
-
             // Calculate final price
-            const dynamicPrice = basePrice * demandFactor * seasonalFactor * durationFactor * vehicleTypeFactor;
+            const dynamicPrice = basePrice * demandFactor * seasonalFactor * durationFactor;
             return Math.round(dynamicPrice * 100) / 100;
         }
 
@@ -230,10 +250,10 @@ if (isset($_POST['book'])) {
                 // Calculate and display dynamic price
                 const dynamicPrice = calculateDynamicPrice(bookingDate, differenceInDays);
                 const totalPrice = dynamicPrice * differenceInDays;
-                totalPriceElement.textContent = `Rs.${totalPrice.toFixed(2)} (Rs.${dynamicPrice.toFixed(2)}/day)`;
+                totalPriceElement.innerHTML = `<span class="price-value">Rs.${totalPrice.toFixed(2)} (Rs.${dynamicPrice.toFixed(2)}/day)</span>`;
             } else {
                 document.getElementById('dur').value = '';
-                totalPriceElement.textContent = 'Select valid dates to see total price';
+                totalPriceElement.innerHTML = 'Select valid dates to see total price';
                 if (bookingDate && returnDate && new Date(bookingDate) >= new Date(returnDate)) {
                     alert("Return date must be after the booking date.");
                     document.getElementById('dfield').value = ''; // Reset invalid return date
@@ -247,7 +267,7 @@ if (isset($_POST['book'])) {
                 if (returnDate && new Date(returnDate) < new Date(bookingDate)) {
                     document.getElementById('dfield').value = '';
                     document.getElementById('dur').value = '';
-                    totalPriceElement.textContent = 'Select valid dates to see total price';
+                    totalPriceElement.innerHTML = 'Select valid dates to see total price';
                     alert("Return date has been reset as it was earlier than the new pickup date.");
                 }
             }

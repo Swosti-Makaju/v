@@ -55,15 +55,14 @@
     </table>
 </div>
 
-<footer>
-    <p>&copy; 2024 VeloRent. All Rights Reserved.</p>
-  
-    <div class="socials">
-        <a href="#"><ion-icon name="logo-facebook"></ion-icon></a>
-        <a href="#"><ion-icon name="logo-twitter"></ion-icon></a>
-        <a href="#"><ion-icon name="logo-instagram"></ion-icon></a>
-    </div>
-</footer>
+    <footer>
+        <p>&copy; 2024 VeloRent. All Rights Reserved.</p>
+        <div class="socials">
+            <a href="https://www.facebook.com/thomasbhattrai" target="_blank"><ion-icon name="logo-facebook"></ion-icon></a>
+            <a href="https://x.com/thomashbhattarai" target="_blank"><ion-icon name="logo-twitter"></ion-icon></a>
+            <a href="https://www.instagram.com/swostimakaju/" target="_blank"><ion-icon name="logo-instagram"></ion-icon></a>
+        </div>
+    </footer>
 
 <script src="https://unpkg.com/ionicons@5.4.0/dist/ionicons.js"></script>
 </body>
