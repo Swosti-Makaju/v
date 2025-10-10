@@ -56,7 +56,7 @@
     <div class="hai">
         <!-- Navigation Bar -->
         <nav class="navbar">
-              <img style="height: 50px; " src="images\icon.png" alt="">
+              <a href="index.php"><img style="height: 50px;" src="images\icon.png" alt=""></a>
             <div class="menu">
                 <ul>
                     <li><a href="index.php">Home</a></li>

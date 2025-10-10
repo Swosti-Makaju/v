@@ -1,93 +1,65 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Success</title>
-    <style>
-        body {
-            font-family: 'Inter', Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-            color: #ffffff;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-        }
+<?php
+session_start();
+require_once('connection.php');
 
-        .card {
-            background: rgba(255, 255, 255, 0.05);
-            padding: 40px;
-            border-radius: 20px;
-            box-shadow: 0 20px 25px rgba(0, 0, 0, 0.2);
-            width: 100%;
-            max-width: 500px;
-            backdrop-filter: blur(10px);
-            text-align: center;
-        }
+// Check if payment was successful and we have pending booking data
+if (!isset($_SESSION['pending_booking']) || !isset($_SESSION['temp_booking_id'])) {
+    header("Location: booking-failed.php?reason=no_booking_data");
+    exit();
+}
 
-        .checkmark {
-            font-size: 100px;
-            color: #6c5ce7;
-            display: block;
-            margin: 0 auto;
-            line-height: 200px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-        }
+// Verify payment success (you should implement proper eSewa verification here)
+$payment_verified = true; // Set to false by default, implement actual verification
 
-        h1 {
-            color: #ffffff;
-            font-size: 2em;
-            margin: 20px 0;
+if ($payment_verified) {
+    $booking_data = $_SESSION['pending_booking'];
+    
+    try {
+        // Insert into database only after successful payment verification
+        $sql = "INSERT INTO booking (VEHICLE_ID, EMAIL, BOOK_PLACE, BOOK_DATE, DURATION, PHONE_NUMBER, DESTINATION, PRICE, RETURN_DATE) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        
+        $stmt = mysqli_prepare($con, $sql);
+        mysqli_stmt_bind_param($stmt, "issssisss", 
+            $booking_data['vehicle_id'],
+            $booking_data['email'],
+            $booking_data['book_place'],
+            $booking_data['book_date'],
+            $booking_data['duration'],
+            $booking_data['phone_number'],
+            $booking_data['destination'],
+            $booking_data['price'],
+            $booking_data['return_date']
+        );
+        
+        $result = mysqli_stmt_execute($stmt);
+        $booking_id = mysqli_insert_id($con);
+        mysqli_stmt_close($stmt);
+        
+        if ($result) {
+            // Clear session data
+            unset($_SESSION['pending_booking']);
+            unset($_SESSION['total_price']);
+            unset($_SESSION['temp_booking_id']);
+            
+            // Store success booking ID for confirmation page
+            $_SESSION['confirmed_booking_id'] = $booking_id;
+            
+            header("Location: booking-success.php");
+            exit();
+        } else {
+            throw new Exception("Database insertion failed");
         }
-
-        p {
-            font-size: 1.2em;
-            margin-bottom: 30px;
-        }
-
-        .ba {
-            display: flex;
-            justify-content: center;
-        }
-
-        #back {
-            background: linear-gradient(90deg, #6c5ce7, #a29bfe);
-            border: none;
-            color: white;
-            padding: 15px 32px;
-            text-align: center;
-            text-decoration: none;
-            font-size: 16px;
-            cursor: pointer;
-            border-radius: 8px;
-            transition: all 0.3s ease;
-            text-shadow: 0 0 3px rgba(0, 0, 0, 0.3);
-        }
-
-        #back:hover {
-            background: linear-gradient(90deg, #5a4ed1, #8e83ff);
-            transform: translateY(-2px);
-        }
-
-        #back a {
-            color: white;
-            text-decoration: none;
-        }
-    </style>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-</head>
-<body>
-    <div class="card">
-      <div style="border-radius: 200px; height: 200px; width: 200px; background: #F8FAF5; margin: 0 auto;">
-        <i class="checkmark">✓</i>
-      </div>
-      <h1>Success</h1> 
-      <p>We received your rental request;<br/> we'll be in touch shortly!</p>
-      <div class="ba"><button id="back"><a href="vehiclesdetails.php">Search vehicles</a></button></div>
-    </div>
-</body>
-</html>
+        
+    } catch (Exception $e) {
+        // Log the error and redirect to failure page
+        error_log("Booking error: " . $e->getMessage());
+        header("Location: pfailure.php?reason=database_error");
+        exit();
+    }
+} else {
+    // Payment verification failed
+    header("Location: pfailure.php?reason=payment_verification_failed");
+    exit();
+}
+?>
