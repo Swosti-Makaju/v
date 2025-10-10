@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Sep 23, 2025 at 02:13 PM
+-- Generation Time: Sep 23, 2025 at 05:32 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -65,7 +65,7 @@ CREATE TABLE `booking` (
 --
 
 INSERT INTO `booking` (`BOOK_ID`, `VEHICLE_ID`, `EMAIL`, `BOOK_PLACE`, `BOOK_DATE`, `DURATION`, `PHONE_NUMBER`, `DESTINATION`, `RETURN_DATE`, `PRICE`, `BOOK_STATUS`, `FINE`) VALUES
-(91, 35, 'swosti@gmail.com', 'bhaktapur', '2025-09-26', 4, 9874563210, 'kathmandu', '2025-09-30', 2470, 'APPROVED', 0.00);
+(104, 38, 'thomasbhattarai@gmail.com', 'Bhaktapur', '2025-09-25', 8, 9860741579, 'Bhaktapur', '2025-10-03', 7200, 'APPROVED', 0.00);
 
 -- --------------------------------------------------------
 
@@ -85,21 +85,6 @@ CREATE TABLE `feedback` (
 
 INSERT INTO `feedback` (`FED_ID`, `EMAIL`, `COMMENT`) VALUES
 (11, 'ram@gmail.com', 'fsdafsadfasf');
-
--- --------------------------------------------------------
-
---
--- Table structure for table `payment`
---
-
-CREATE TABLE `payment` (
-  `PAY_ID` int(11) NOT NULL,
-  `BOOK_ID` int(11) NOT NULL,
-  `CARD_NO` varchar(255) NOT NULL,
-  `EXP_DATE` varchar(255) NOT NULL,
-  `CVV` int(11) NOT NULL,
-  `PRICE` int(11) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -167,7 +152,7 @@ INSERT INTO `vehicles` (`VEHICLE_ID`, `VEHICLE_NAME`, `VEHICLE_TYPE`, `FUEL_TYPE
 (44, 'Honda', 'Bike', 'Petrol', 2, 1200, 'IMG-68d27a4a69d145.24807193.png', 'Y'),
 (45, 'KTM', 'Bike', 'Petrol', 2, 860, 'IMG-68d27aa2624f40.14606218.png', 'Y'),
 (46, 'NS Pulser', 'Bike', 'Petrol', 2, 850, 'IMG-68d27abdb3b287.57395677.png', 'Y'),
-(47, 'Royal Enfield Himalayan', 'Bike', 'Petrol', 2, 1250, 'IMG-68d27ae9338170.84666158.png', 'Y'),
+(47, 'Royal Enfield', 'Bike', 'Petrol', 2, 1250, 'IMG-68d27ae9338170.84666158.png', 'Y'),
 (48, 'BYD Dolphin', 'Car', 'EV', 4, 1900, 'IMG-68d27cbe947cf5.78627318.png', 'Y'),
 (49, 'Hyundai', 'Car', 'Diesel', 4, 2000, 'IMG-68d27d556d5aa6.46888955.png', 'Y'),
 (50, 'Renault KWID', 'Car', 'Petrol', 4, 2100, 'IMG-68d27d8c601400.91573840.png', 'Y'),
@@ -205,13 +190,6 @@ ALTER TABLE `feedback`
   ADD KEY `TEST` (`EMAIL`);
 
 --
--- Indexes for table `payment`
---
-ALTER TABLE `payment`
-  ADD PRIMARY KEY (`PAY_ID`),
-  ADD UNIQUE KEY `BOOK_ID` (`BOOK_ID`);
-
---
 -- Indexes for table `users`
 --
 ALTER TABLE `users`
@@ -231,19 +209,13 @@ ALTER TABLE `vehicles`
 -- AUTO_INCREMENT for table `booking`
 --
 ALTER TABLE `booking`
-  MODIFY `BOOK_ID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=92;
+  MODIFY `BOOK_ID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=105;
 
 --
 -- AUTO_INCREMENT for table `feedback`
 --
 ALTER TABLE `feedback`
   MODIFY `FED_ID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
-
---
--- AUTO_INCREMENT for table `payment`
---
-ALTER TABLE `payment`
-  MODIFY `PAY_ID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=36;
 
 --
 -- AUTO_INCREMENT for table `vehicles`
@@ -267,12 +239,6 @@ ALTER TABLE `booking`
 --
 ALTER TABLE `feedback`
   ADD CONSTRAINT `TEST` FOREIGN KEY (`EMAIL`) REFERENCES `users` (`EMAIL`) ON DELETE CASCADE ON UPDATE CASCADE;
-
---
--- Constraints for table `payment`
---
-ALTER TABLE `payment`
-  ADD CONSTRAINT `payment_ibfk_1` FOREIGN KEY (`BOOK_ID`) REFERENCES `booking` (`BOOK_ID`) ON DELETE CASCADE ON UPDATE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
