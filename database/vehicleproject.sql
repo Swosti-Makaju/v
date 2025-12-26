@@ -234,12 +234,22 @@ ALTER TABLE `booking`
   ADD CONSTRAINT `booking_ibfk_1` FOREIGN KEY (`VEHICLE_ID`) REFERENCES `vehicles` (`VEHICLE_ID`) ON DELETE CASCADE ON UPDATE CASCADE,
   ADD CONSTRAINT `booking_ibfk_2` FOREIGN KEY (`EMAIL`) REFERENCES `users` (`EMAIL`) ON DELETE CASCADE ON UPDATE CASCADE;
 
---
--- Constraints for table `feedback`
---
-ALTER TABLE `feedback`
-  ADD CONSTRAINT `TEST` FOREIGN KEY (`EMAIL`) REFERENCES `users` (`EMAIL`) ON DELETE CASCADE ON UPDATE CASCADE;
-COMMIT;
+
+CREATE TABLE IF NOT EXISTS settings (
+  k VARCHAR(50) PRIMARY KEY,
+  val VARCHAR(255) NOT NULL
+);
+
+INSERT INTO settings (k,val) VALUES
+('site_name','VeloRent'),
+('logo_text','VeloRent Admin'),
+('contact_mail','admin@velorent.com'),
+('contact_phone','+977-9800000000'),
+('currency','Rs'),
+('min_hours','1'),
+('tax_percent','0'),
+('late_fee','0')
+ON DUPLICATE KEY UPDATE val=val;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
