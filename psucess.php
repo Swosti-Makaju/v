@@ -2,6 +2,18 @@
 session_start();
 require_once('connection.php');
 
+try {
+    /* your existing DB code here */
+    $stmt = $con->prepare("UPDATE booking SET BOOK_STATUS='PAID' WHERE BOOK_ID=?");
+    $stmt->bind_param("i", $bookId);
+    $stmt->execute();
+} catch (Exception $e) {
+    // THIS line writes the real error
+    file_put_contents('esewa_real_error.log', date('Y-m-d H:i:s')." | ".$e->getMessage().PHP_EOL, FILE_APPEND);
+    header("Location: pfailure.php?reason=database_error");
+    exit();
+}
+
 // Check if payment was successful and we have pending booking data
 if (!isset($_SESSION['pending_booking']) || !isset($_SESSION['temp_booking_id'])) {
     header("Location: booking-failed.php?reason=no_booking_data");

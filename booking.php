@@ -23,47 +23,46 @@ $user = mysqli_fetch_assoc($name);
 $uemail = $user['EMAIL'];
 $base_price = $vehicle['PRICE'];
 
-// Dynamic Pricing Algorithm
-function calculateDynamicPrice($base_price, $booking_date, $duration, $vehicle_type)
+// Dynamic Pricing Algorithm - UPDATED VERSION
+function calculateDynamicPrice($base_price, $duration)
 {
-    // Demand Factor: Increase price by 20% on weekends
-    $date = new DateTime($booking_date);
-    $day_of_week = $date->format('N'); // 1 (Monday) to 7 (Sunday)
-    $demand_factor = ($day_of_week >= 6) ? 1.2 : 1.0; // 20% increase on weekends (Saturday/Sunday)
-
-    // Seasonal Factor: Adjust based on month (e.g., peak season: June, July, December)
-    $month = $date->format('n'); // 1 to 12
-    $peak_months = [6, 7, 12]; // June, July, December
-    $seasonal_factor = in_array($month, $peak_months) ? 1.3 : 1.0; // 30% increase in peak season
-
-    // Duration Factor: Discount for longer bookings
-    $duration_factor = 1.0;
-    if ($duration >= 7) {
-        $duration_factor = 0.9; // 10% discount for bookings of 7+ days
-    } elseif ($duration >= 3) {
-        $duration_factor = 0.95; // 5% discount for bookings of 3-6 days
+    // For 1-day bookings: Always use base price (no discount)
+    if ($duration <= 1) {
+        return $base_price;
     }
-
-    // Calculate final price
-    $dynamic_price = $base_price * $demand_factor * $seasonal_factor * $duration_factor;
+    
+    // For multi-day bookings: Apply discount based on duration
+    $discount_percentage = 0;
+    
+    if ($duration >= 7) {
+        $discount_percentage = 10; // 10% discount for 7+ days
+    } elseif ($duration >= 3) {
+        $discount_percentage = 5; // 5% discount for 3-6 days
+    } elseif ($duration >= 2) {
+        $discount_percentage = 2; // 2% discount for 2 days
+    }
+    
+    // Calculate discounted price
+    $discount_amount = $base_price * ($discount_percentage / 100);
+    $dynamic_price = $base_price - $discount_amount;
+    
     return round($dynamic_price, 2);
 }
 
 if (isset($_POST['book'])) {
     $bplace = mysqli_real_escape_string($con, $_POST['place']);
     $bdate = date('Y-m-d', strtotime($_POST['date']));
-    $dur = mysqli_real_escape_string($con, $_POST['dur']);
+    $dur = (int)$_POST['dur']; // Ensure duration is integer
     $phno = mysqli_real_escape_string($con, $_POST['ph']);
     $des = mysqli_real_escape_string($con, $_POST['des']);
     $rdate = date('Y-m-d', strtotime($_POST['rdate']));
 
     if (empty($bplace) || empty($bdate) || empty($dur) || empty($phno) || empty($des) || empty($rdate)) {
-        echo '<script>alert("Please fill all fields")</script>';
+        echo '<script>showDialog("Please fill all fields")</script>';
     } else {
         if ($bdate < $rdate) {
-            // Assume vehicle type is stored in the vehicles table; adjust as per your database schema
-            $vehicle_type = isset($vehicle['VEHICLE_TYPE']) ? $vehicle['VEHICLE_TYPE'] : 'Standard';
-            $dynamic_price = calculateDynamicPrice($base_price, $bdate, $dur, $vehicle_type);
+            // Calculate dynamic price based on duration only
+            $dynamic_price = calculateDynamicPrice($base_price, $dur);
             $total_price = $dynamic_price * $dur;
 
             // Store booking data in session instead of inserting into database
@@ -76,8 +75,10 @@ if (isset($_POST['book'])) {
                 'phone_number' => $phno,
                 'destination' => $des,
                 'price' => $total_price,
+                'daily_price' => $dynamic_price,
                 'return_date' => $rdate,
-                'vehicle_name' => $vehicle['VEHICLE_NAME']
+                'vehicle_name' => $vehicle['VEHICLE_NAME'],
+                'base_price' => $base_price
             ];
             
             $_SESSION['total_price'] = $total_price;
@@ -85,7 +86,7 @@ if (isset($_POST['book'])) {
             header("Location: esewa-intregation.php");
             exit();
         } else {
-            echo '<script>alert("Please enter a correct return date")</script>';
+            echo '<script>showDialog("Please enter a correct return date")</script>';
         }
     }
 }
@@ -93,91 +94,280 @@ if (isset($_POST['book'])) {
 
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VEHICLE BOOKING - VeloRent</title>
-    <link rel="stylesheet" href="css/booking.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="main.js" defer></script>
     <style>
-        .price-box {
-            background-color: #f9f9f9;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            padding: 15px;
-            margin: 20px 0;
-            font-size: 16px;
-            color: #333;
+        /* Reset and Base Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
         }
 
-        .price-box label {
-            font-weight: 600;
-            margin-right: 5px;
+        body {
+            background: #fff;
+            color: linear-gradient(135deg, #0c0c0c, #1a1a2e);
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
         }
 
-        .price-box p {
-            margin: 5px 0;
-            display: flex;
-            align-items: center;
-        }
-        
-        .note {
-            background-color: #fff3cd;
-            border: 1px solid #ffeaa7;
-            border-radius: 5px;
-            padding: 10px;
-            margin: 10px 0;
-            font-size: 14px;
-            color: #856404;
-        }
-        
-        .btnn {
-            background: linear-gradient(45deg, #FF6B6B, #EE5A24);
+        /* Cancel Button */
+        .cancel-btn {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
             border: none;
             color: white;
-            padding: 12px 30px;
+            padding: 12px 25px;
             font-size: 16px;
             font-weight: 600;
-            border-radius: 5px;
+            border-radius: 50px;
             cursor: pointer;
             transition: all 0.3s ease;
-        }
-        
-        .btnn:hover {
-            background: linear-gradient(45deg, #EE5A24, #FF6B6B);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            box-shadow: 0 5px 15px rgba(255, 123, 0, 0.3);
+            z-index: 100;
         }
 
+        .cancel-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(255, 123, 0, 0.4);
+        }
+
+        /* Main Content Box */
+        .content-box {
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 100px 20px 50px;
+        }
+
+        .register {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            width: 100%;
+            max-width: 500px;
+        }
+
+        .register h2 {
+            font-size: 2rem;
+            margin-bottom: 30px;
+            text-align: center;
+            color: #764ba2;
+            background: linear-gradient(45deg, #764ba2, #667eea);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        /* Form Styling */
+        #register {
+            display: flex;
+            flex-direction: column;
+        }
+
+        #register > h2 {
+            font-size: 1.5rem;
+            color: #101010ff;
+            margin-bottom: 20px;
+            text-align: center;
+            text-shadow: 0 0 10px rgba(130, 112, 96, 0.5);
+        }
+
+        label {
+            font-size: 1rem;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: #282525ff;
+        }
+
+        input[type="text"],
+        input[type="date"],
+        input[type="number"],
+        input[type="tel"],
+        input[type="email"],
+        input[type="password"] {
+            width: 100%;
+            padding: 15px;
+            margin-bottom: 20px;
+            border: none;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            background-color: #d5daefff;
+            color: #222222ff;
+            font-size: 1rem;
+            outline: none;
+            transition: background 0.3s, box-shadow 0.3s;
+        }
+
+        input[type="text"]:focus,
+        input[type="date"]:focus,
+        input[type="number"]:focus,
+        input[type="tel"]:focus {
+            background: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 0 10px rgba(143, 135, 128, 0.7);
+        }
+
+        input::placeholder {
+            color: rgba(37, 35, 35, 0.6);
+        }
+
+        input[readonly] {
+            background: rgba(255, 255, 255, 0.08);
+            cursor: not-allowed;
+        }
+
+        /* Price Display */
         .price-display {
-            background-color: #f8f9fa;
-            border: 1px solid #dee2e6;
-            border-radius: 5px;
-            padding: 10px 15px;
-            font-size: 16px;
-            color: #495057;
-            margin-bottom: 15px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(99, 83, 68, 0.3);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            font-size: 1.1rem;
+            color: #667eea;
+            font-weight: 600;
+            text-align: center;
+            min-height: 60px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
         }
 
-     
+        .discount-info {
+            font-size: 0.9rem;
+            color: #4CAF50;
+            margin-top: 5px;
+            font-weight: 500;
+        }
+
+        /* Submit Button */
+        .btnn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: #fff;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.3s, box-shadow 0.3s;
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            margin-top: 10px;
+            box-shadow: 0 5px 15px rgba(255, 123, 0, 0.3);
+        }
+
+        .btnn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(255, 123, 0, 0.4);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .content-box {
+                padding: 80px 15px 40px;
+            }
+            
+            .register {
+                padding: 30px 20px;
+                margin-top: 20px;
+            }
+            
+            .register h2 {
+                font-size: 1.8rem;
+            }
+            
+            .cancel-btn {
+                top: 20px;
+                right: 20px;
+                padding: 10px 20px;
+                font-size: 14px;
+            }
+            
+            .price-display {
+                font-size: 1rem;
+                padding: 12px;
+                min-height: 55px;
+            }
+            
+            .discount-info {
+                font-size: 0.85rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .content-box {
+                padding: 70px 10px 30px;
+            }
+            
+            .register {
+                padding: 25px 15px;
+            }
+            
+            .register h2 {
+                font-size: 1.5rem;
+            }
+            
+            input[type="text"],
+            input[type="date"],
+            input[type="number"],
+            input[type="tel"] {
+                padding: 12px;
+                font-size: 0.95rem;
+            }
+            
+            .btnn {
+                padding: 12px;
+                font-size: 1rem;
+            }
+            
+            .cancel-btn {
+                top: 15px;
+                right: 15px;
+                padding: 8px 16px;
+                font-size: 13px;
+            }
+            
+            .price-display {
+                padding: 10px;
+                min-height: 50px;
+                font-size: 0.95rem;
+            }
+            
+            .discount-info {
+                font-size: 0.8rem;
+            }
+        }
     </style>
 </head>
 
 <body>
-
+    <!-- Cancel Button -->
     <button class="cancel-btn" onclick="window.location.href='vehiclesdetails.php'">CANCEL</button>
 
     <div class="content-box">
         <div class="register">
-            <h2>BOOKING</h2>
+            <h2>VEHICLE BOOKING</h2>
             <form id="register" method="POST">
-                <h2>VEHICLE NAME: <?php echo htmlspecialchars($vehicle['VEHICLE_NAME']); ?></h2>
+                <h2><?php echo htmlspecialchars($vehicle['VEHICLE_NAME']); ?></h2>
                 
                 <label for="baseprice">BASE PRICE PER DAY:</label>
                 <div class="price-display">
                     Rs.<?php echo number_format($base_price, 2); ?>
+                    <div class="discount-info">(1-day booking price)</div>
                 </div>
 
                 <label for="place">BOOKING PLACE:</label>
@@ -193,14 +383,21 @@ if (isset($_POST['book'])) {
                 <input type="number" name="dur" id="dur" readonly>
 
                 <label for="ph">PHONE NUMBER:</label>
-                <input type="tel" name="ph" id="ph" maxlength="10" placeholder="Enter Your Phone Number" required>
+                <input type="tel" name="ph" id="ph" maxlength="10" placeholder="Enter Your Phone Number" required pattern="[0-9]{10}" title="Enter a valid 10-digit phone number">
 
                 <label for="des">DESTINATION:</label>
                 <input type="text" name="des" id="des" placeholder="Enter Your Destination" required>
 
                 <label for="totalprice">TOTAL PRICE:</label>
                 <div class="price-display" id="total-price">
-                    Select valid dates to see total price
+                    Select booking and return dates to see total price
+                </div>
+                
+                <div class="discount-info" id="discount-details" style="margin-bottom: 20px; text-align: center; display: none;">
+                    <strong>Discount Policy:</strong><br>
+                    • 2 days: 2% discount per day<br>
+                    • 3-6 days: 5% discount per day<br>
+                    • 7+ days: 10% discount per day
                 </div>
 
                 <input type="submit" class="btnn" value="PROCEED TO PAYMENT" name="book">
@@ -209,71 +406,117 @@ if (isset($_POST['book'])) {
     </div>
 
     <script>
-        // Pass PHP variables to JavaScript
+        // Base price from PHP
         const basePrice = <?php echo json_encode($base_price); ?>;
-        const vehicleType = <?php echo json_encode(isset($vehicle['VEHICLE_TYPE']) ? $vehicle['VEHICLE_TYPE'] : 'Standard'); ?>;
-
-        function calculateDynamicPrice(bookingDate, duration) {
-            // Demand Factor: Increase price by 20% on weekends
-            const date = new Date(bookingDate);
-            const dayOfWeek = date.getDay() + 1; // 1 (Monday) to 7 (Sunday)
-            const demandFactor = (dayOfWeek >= 6) ? 1.2 : 1.0;
-
-            // Seasonal Factor: Adjust based on month (June, July, December)
-            const month = date.getMonth() + 1; // 1 to 12
-            const peakMonths = [6, 7, 12];
-            const seasonalFactor = peakMonths.includes(month) ? 1.3 : 1.0;
-
-            // Duration Factor: Discount for longer bookings
-            let durationFactor = 1.0;
-            if (duration >= 7) {
-                durationFactor = 0.9;
-            } else if (duration >= 3) {
-                durationFactor = 0.95;
+        
+        // Function to calculate dynamic price based on duration
+        function calculateDynamicPrice(duration) {
+            // For 1-day bookings: Always use base price (no discount)
+            if (duration <= 1) {
+                return basePrice;
             }
-
-            // Calculate final price
-            const dynamicPrice = basePrice * demandFactor * seasonalFactor * durationFactor;
+            
+            // For multi-day bookings: Apply discount based on duration
+            let discountPercentage = 0;
+            
+            if (duration >= 7) {
+                discountPercentage = 10; // 10% discount for 7+ days
+            } else if (duration >= 3) {
+                discountPercentage = 5; // 5% discount for 3-6 days
+            } else if (duration >= 2) {
+                discountPercentage = 2; // 2% discount for 2 days
+            }
+            
+            // Calculate discounted price
+            const discountAmount = basePrice * (discountPercentage / 100);
+            const dynamicPrice = basePrice - discountAmount;
+            
             return Math.round(dynamicPrice * 100) / 100;
         }
 
+        // Function to update price and duration when dates change
         function updatePriceAndDuration() {
             const bookingDate = document.getElementById('datefield').value;
             const returnDate = document.getElementById('dfield').value;
             const totalPriceElement = document.getElementById('total-price');
+            const discountDetails = document.getElementById('discount-details');
+            const durationField = document.getElementById('dur');
 
             if (bookingDate && returnDate && new Date(bookingDate) < new Date(returnDate)) {
                 const differenceInTime = new Date(returnDate).getTime() - new Date(bookingDate).getTime();
                 const differenceInDays = Math.ceil(differenceInTime / (1000 * 3600 * 24));
-                document.getElementById('dur').value = differenceInDays;
+                durationField.value = differenceInDays;
 
-                // Calculate and display dynamic price
-                const dynamicPrice = calculateDynamicPrice(bookingDate, differenceInDays);
+                // Calculate prices
+                const dynamicPrice = calculateDynamicPrice(differenceInDays);
                 const totalPrice = dynamicPrice * differenceInDays;
-                totalPriceElement.innerHTML = `<span class="price-value">Rs.${totalPrice.toFixed(2)} (Rs.${dynamicPrice.toFixed(2)}/day)</span>`;
+                
+                // Determine discount percentage
+                let discountPercentage = 0;
+                if (differenceInDays >= 7) {
+                    discountPercentage = 10;
+                } else if (differenceInDays >= 3) {
+                    discountPercentage = 5;
+                } else if (differenceInDays >= 2) {
+                    discountPercentage = 2;
+                }
+                
+                // Build display text
+                let displayText = `<span style="font-size: 1.2em;">Rs.${totalPrice.toFixed(2)}</span>`;
+                
+                if (differenceInDays === 1) {
+                    displayText += `<br><small>Rs.${dynamicPrice.toFixed(2)} × ${differenceInDays} day (Base Price)</small>`;
+                } else {
+                    const originalTotal = basePrice * differenceInDays;
+                    const discountAmount = originalTotal - totalPrice;
+                    
+                    displayText += `
+                        <br><small>
+                            Rs.${dynamicPrice.toFixed(2)}/day × ${differenceInDays} days
+                        </small>
+                        <div class="discount-info">
+                            ✓ ${discountPercentage}% discount applied<br>
+                            You save: Rs.${discountAmount.toFixed(2)}
+                        </div>
+                    `;
+                }
+                
+                totalPriceElement.innerHTML = displayText;
+                
+                // Show discount details if booking is for more than 1 day
+                if (differenceInDays > 1) {
+                    discountDetails.style.display = 'block';
+                } else {
+                    discountDetails.style.display = 'none';
+                }
+                
             } else {
-                document.getElementById('dur').value = '';
-                totalPriceElement.innerHTML = 'Select valid dates to see total price';
+                durationField.value = '';
+                totalPriceElement.innerHTML = 'Select booking and return dates to see total price';
+                discountDetails.style.display = 'none';
+                
                 if (bookingDate && returnDate && new Date(bookingDate) >= new Date(returnDate)) {
-                    alert("Return date must be after the booking date.");
-                    document.getElementById('dfield').value = ''; // Reset invalid return date
+                    showDialog("Return date must be after the booking date.");
+                    document.getElementById('dfield').value = '';
                 }
             }
 
-            // Update return date min attribute
+            // Update min date for return date and validate
             if (bookingDate) {
                 document.getElementById('dfield').setAttribute('min', bookingDate);
-                const returnDate = document.getElementById('dfield').value;
-                if (returnDate && new Date(returnDate) < new Date(bookingDate)) {
+                const currentReturnDate = document.getElementById('dfield').value;
+                
+                if (currentReturnDate && new Date(currentReturnDate) < new Date(bookingDate)) {
                     document.getElementById('dfield').value = '';
                     document.getElementById('dur').value = '';
-                    totalPriceElement.innerHTML = 'Select valid dates to see total price';
-                    alert("Return date has been reset as it was earlier than the new pickup date.");
+                    totalPriceElement.innerHTML = 'Select booking and return dates to see total price';
+                    discountDetails.style.display = 'none';
+                    showDialog("Return date has been reset as it was earlier than the new pickup date.");
                 }
             }
         }
 
-        // Set minimum date for both date pickers to today
+        // Set minimum dates to today
         const today = new Date();
         const dd = today.getDate();
         const mm = today.getMonth() + 1;
@@ -282,11 +525,33 @@ if (isset($_POST['book'])) {
         document.getElementById("datefield").setAttribute("min", formattedToday);
         document.getElementById("dfield").setAttribute("min", formattedToday);
 
-        // Event listeners
+        // Add event listeners
         document.getElementById("datefield").addEventListener('change', updatePriceAndDuration);
         document.getElementById("dfield").addEventListener('change', updatePriceAndDuration);
+        
+        // Phone number validation
+        document.getElementById('ph').addEventListener('input', function(e) {
+            this.value = this.value.replace(/[^0-9]/g, '');
+            if (this.value.length > 10) {
+                this.value = this.value.slice(0, 10);
+            }
+        });
+        
+        // Form submission validation
+        document.getElementById('register').addEventListener('submit', function(e) {
+            const phone = document.getElementById('ph').value;
+            if (phone.length !== 10) {
+                e.preventDefault();
+                showDialog('Please enter a valid 10-digit phone number.');
+                document.getElementById('ph').focus();
+            }
+            
+            const duration = document.getElementById('dur').value;
+            if (!duration || duration < 1) {
+                e.preventDefault();
+                showDialog('Please select valid booking and return dates.');
+            }
+        });
     </script>
-
 </body>
-
 </html>

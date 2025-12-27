@@ -1,3 +1,7 @@
+<?php
+// Buffer output so redirects can happen even after markup starts
+ob_start();
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5,131 +9,388 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VEHICLE Details</title>
-    <link rel="stylesheet" href="css/vehiclesdetails.css">
+    
+    <!-- Using the remembered CSS from the login page (dark futuristic theme) -->
     <style>
+        /* Reset and Base Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        body {
+             background: #f8f9fa;
+            color: #2c3e50;
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+
+
+        @keyframes spin {
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Navbar Styles */
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 5%;
+             background: #ffffff;
+            backdrop-filter: blur(10px);
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 1000;
+             box-shadow: 0 2px 20px rgba(0, 0, 0, 0.06);
+        }
+
+        .navbar img {
+            height: 50px;
+            transition: transform 0.3s;
+        }
+
+        .navbar img:hover {
+            transform: scale(1.05);
+        }
+
+        .menu ul {
+            display: flex;
+            list-style: none;
+            gap: 30px;
+            align-items: center;
+        }
+
+        .menu a, .menu p {
+             color: #193959ff;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 1rem;
+            transition: color 0.3s;
+        }
+
+        .menu a:hover {
+            color: #3498db;
+        }
+
+        .nn {
+            background: linear-gradient(45deg, #3498db, #764ba2           background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .nn a {
+            color: #111010ff;
+            text-decoration: none;
+        }
+
+        .nn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(64, 102, 178, 0.4);
+        }
+
+        /* Search & Filter Bar */
         .search-filter {
             display: flex;
             justify-content: center;
             align-items: center;
             gap: 20px;
-            margin: 20px 0;
-            position: relative;
+            margin: 100px 0 40px;
+            flex-wrap: wrap;
         }
+
         .search-filter input {
-            padding: 10px 15px;
-            width: 250px;
-            border: 1px solid #d1d1d1;
-            border-radius: 6px;
-            font-size: 16px;
+            padding: 12px 20px;
+            width: 300px;
+            max-width: 100%;
+            border: none;
+            border-radius: 50px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #221f1fff;
+            font-size: 1rem;
             outline: none;
-            transition: border-color 0.3s ease;
+            backdrop-filter: blur(5px);
         }
+
+        .search-filter input::placeholder {
+            color: rgba(39, 35, 35, 0.6);
+        }
+
         .search-filter input:focus {
-            border-color: #4CAF50;
-            box-shadow: 0 0 5px rgba(76, 175, 80, 0.2);
+            background: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 0 15px rgba(255, 123, 0, 0.3);
         }
+
         .filter-container {
             position: relative;
         }
+
         .filter-button {
-            padding: 10px 15px;
-            background-color: #4CAF50;
-            color: white;
+            background: linear-gradient(45deg, #3498db, #764ba2           background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+);
+            color: #221f1fff;
             border: none;
-            border-radius: 6px;
+            padding: 12px 20px;
+            border-radius: 50px;
             cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
             display: flex;
             align-items: center;
             gap: 8px;
-            font-size: 16px;
-            transition: background-color 0.3s ease, transform 0.2s ease;
+            transition: all 0.3s;
         }
+
         .filter-button:hover {
-            background-color: #45a049;
-            transform: translateY(-1px);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(64, 102, 178, 0.4);
         }
-        .filter-button ion-icon {
-            font-size: 20px;
-        }
+
         .filter-dropdown {
             display: none;
             position: absolute;
             top: 110%;
             right: 0;
-            background-color: #ffffff;
-            border: 1px solid #e0e0e0;
-            border-radius: 6px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-            z-index: 10;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
             min-width: 180px;
+            z-index: 10;
+            overflow: hidden;
         }
+
         .filter-dropdown.show {
             display: block;
         }
+
         .filter-dropdown a {
             display: block;
             padding: 12px 20px;
+            color: #221f1fff;
             text-decoration: none;
-            color: #333;
-            font-size: 14px;
-            font-weight: 500;
-            transition: background-color 0.2s ease;
+            transition: background 0.3s;
         }
+
         .filter-dropdown a:hover {
-            background-color: #f5f5f5;
-            color: #4CAF50;
+            background: rgba(65, 62, 60, 0.3);
         }
+
+        /* Page Title */
+        .overview {
+            text-align: center;
+            font-size: 2.8rem;
+            margin: 40px 0;
+            background: linear-gradient(45deg, #3498db, #764ba2);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        /* Sections */
+        .recommended-section h2,
+        .other-vehicles-section h2 {
+            text-align: center;
+            font-size: 2.2rem;
+            margin: 50px 0 30px;
+            background: linear-gradient(45deg, #3498db, #764ba2);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        /* Vehicle Grid */
+        .de {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 30px;
+            padding: 0 5%;
+            list-style: none;
+        }
+
         .vehicle-item {
             display: none;
         }
+
         .vehicle-item.visible {
             display: block;
+            animation: fadeInUp 0.6s ease forwards;
         }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .box {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .box:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(255, 123, 0, 0.3);
+        }
+
+        .imgBx {
+            position: relative;
+            height: 220px;
+            overflow: hidden;
+        }
+
+        .imgBx img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s;
+        }
+
+        .box:hover .imgBx img {
+            transform: scale(1.1);
+        }
+
         .recommended-badge {
             position: absolute;
-            top: 10px;
-            right: 10px;
-            background-color: #4CAF50;
-            color: white;
-            padding: 5px 10px;
-            border-radius: 4px;
-            font-size: 12px;
+            top: 15px;
+            right: 15px;
+            background: linear-gradient(45deg, #3498db, #764ba2);
+            color: #1a1919ff;
+            padding: 8px 15px;
+            border-radius: 50px;
+            font-size: 0.9rem;
             font-weight: bold;
             z-index: 5;
         }
-        .imgBx {
-            position: relative;
-        }
-        .recommended-section {
-            margin-bottom: 40px;
-        }
-        .recommended-section h2 {
+
+        .content {
+            padding: 25px;
             text-align: center;
-           
-            margin-bottom: 20px;
-         
         }
-        .other-vehicles-section h2 {
+
+        .content h1 {
+            font-size: 1.8rem;
+            margin-bottom: 15px;
+            color: #764ba2;
+        }
+
+        .content h2 {
+            font-size: 1.1rem;
+            margin: 10px 0;
+            color: #252020ff;
+        }
+
+        .content h2 a {
+            color: #383434ff;
+            font-weight: 600;
+        }
+
+        .utton {
+            margin-top: 20px;
+            display: inline-block;
+            background: linear-gradient(45deg, #3498db, #764ba2);
+            border: none;
+            padding: 14px 30px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #342f2fff;
+            text-decoration: none;
+            transition: all 0.3s;
             text-align: center;
-           
+        }
+
+        .utton:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(255, 123, 0, 0.4);
+        }
+
+        /* Footer */
+     footer {
+            background: rgba(0, 0, 0, 0.05);
+            padding: 10px 5%;
+            text-align: center;
+            margin-top: 80px;
+        }
+
+        footer p {
             margin-bottom: 20px;
-          
+            color: #524f4f;
+        }
+
+        .socials {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+        }
+
+        .socials a {
+            color: #333;
+            font-size: 1.5rem;
+            transition: color 0.3s, transform 0.3s;
+        }
+
+        .socials a:hover {
+            color: #667eea;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .search-filter {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .search-filter input {
+                width: 90%;
+            }
+
+            .de {
+                grid-template-columns: 1fr;
+                padding: 0 5%;
+            }
+
+            .overview {
+                font-size: 2.2rem;
+            }
         }
     </style>
 </head>
-
 <body class="body">
+
 
 <?php 
     require_once('connection.php');
     session_start();
 
-    $value = $_SESSION['email'];
+    // Require logged-in user and load their record; redirect if missing
+    $value = isset($_SESSION['email']) ? $_SESSION['email'] : null;
+    if (!$value) {
+        header('Location: index.php');
+        exit;
+    }
+
     $_SESSION['email'] = $value;
-    
     $sql = "select * from users where EMAIL='$value'";
     $name = mysqli_query($con, $sql);
-    $rows = mysqli_fetch_assoc($name);
+    $rows = ($name && ($fetched = mysqli_fetch_assoc($name))) ? $fetched : null;
+    if (!$rows) {
+        header('Location: index.php');
+        exit;
+    }
     
     // Handle sorting
     $sort = '';
@@ -171,6 +432,18 @@
     while($result = mysqli_fetch_array($vehicles)) {
         $vehicleData[] = $result;
     }
+
+    /* which vehicles are currently booked? */
+$bookedIds = [];
+$today = date('Y-m-d');
+$bkQ = mysqli_query($con,
+ "SELECT DISTINCT VEHICLE_ID
+  FROM booking
+  WHERE BOOK_STATUS IN ('APPROVED','PENDING')
+    AND (BOOK_DATE <= '$today' AND RETURN_DATE >= '$today')");
+while ($b = mysqli_fetch_assoc($bkQ)) {
+    $bookedIds[] = $b['VEHICLE_ID'];
+}
     
 // Recommendation Algorithm
 $recommendedVehicles = [];
@@ -324,18 +597,20 @@ $recommendedIds = array_column(array_column($recommendedVehicles, 'vehicle'), 'V
 ?>
 
 <div class="cd">
-    <div class="navbar">
+    <nav class="navbar">
         <div class="icon">
-            <a href="vehiclesdetails.php"><img style="height: 50px;" src="images\icon.png" alt=""></a>
+            <a href="vehiclesdetails.php"><img style="height: 50px;" src="images/icon.png" alt="VeloRent Logo"></a>
         </div>
         <div class="menu">
             <ul>
-                <li><p class="phello"><a id="pname"><?php echo $rows['FNAME']." ".$rows['LNAME']?></a></p></li>
+                <li><p class="phello"><a id="pname" href="userprofile.php" style="cursor: pointer;"><?php echo htmlspecialchars($rows['FNAME'].' '.$rows['LNAME']); ?></a></p></li>
                 <li><a id="stat" href="bookingstatus.php">BOOKING STATUS</a></li>
                 <li><button class="nn"><a href="index.php">LOGOUT</a></button></li>
             </ul>
         </div>
-    </div>
+    </nav>
+    <br>
+    <br>
 
     <div class="search-filter">
         <input type="text" id="searchInput" placeholder="Search vehicle name...">
@@ -352,7 +627,7 @@ $recommendedIds = array_column(array_column($recommendedVehicles, 'vehicle'), 'V
         </div>
         <div class="filter-container">
             <button class="filter-button" onclick="toggleFilterDropdown('price')">
-                <ion-icon name="options-outline"></ion-icon> Filter
+                <ion-icon name="options-outline"></ion-icon> Sort by Price
             </button>
             <div class="filter-dropdown" id="priceFilterDropdown">
                 <a href="?sort=price_asc">Price: Low to High</a>
@@ -366,17 +641,17 @@ $recommendedIds = array_column(array_column($recommendedVehicles, 'vehicle'), 'V
     <!-- Recommended Vehicles Section -->
     <?php if (!empty($recommendedVehicles)): ?>
     <div class="recommended-section">
-        <h2>Recommended Vehicles</h2>
+        <h2>Recommended For You</h2>
         <ul class="de">
             <?php foreach ($recommendedVehicles as $recVehicle): 
                 $vehicle = $recVehicle['vehicle'];
                 $res = $vehicle['VEHICLE_ID'];
             ?>
-            <li class="vehicle-item" data-name="<?php echo htmlspecialchars(strtolower($vehicle['VEHICLE_NAME'])); ?>" data-type="<?php echo htmlspecialchars(strtolower($vehicle['VEHICLE_TYPE'])); ?>">
+            <li class="vehicle-item visible" data-name="<?php echo htmlspecialchars(strtolower($vehicle['VEHICLE_NAME'])); ?>" data-type="<?php echo htmlspecialchars(strtolower($vehicle['VEHICLE_TYPE'])); ?>">
                 <form method="POST">
                     <div class="box">
                         <div class="imgBx">
-                            <img src="images/<?php echo $vehicle['VEHICLE_IMG']?>">
+                            <img src="images/<?php echo $vehicle['VEHICLE_IMG']?>" alt="<?php echo $vehicle['VEHICLE_NAME']?>">
                             <div class="recommended-badge">RECOMMENDED</div>
                         </div>
                         <div class="content">
@@ -385,9 +660,7 @@ $recommendedIds = array_column(array_column($recommendedVehicles, 'vehicle'), 'V
                             <h2>Capacity: <a><?php echo $vehicle['CAPACITY']?></a></h2>
                             <h2>Rent Per Day: <a>Rs<?php echo $vehicle['PRICE']?>/-</a></h2>
                             <h2>Vehicle Type: <a><?php echo $vehicle['VEHICLE_TYPE']?></a></h2>
-                            <button type="submit" name="booknow" class="utton" style="margin-top: 5px;">
-                                <a href="booking.php?id=<?php echo $res;?>">Book</a>
-                            </button>
+                            <a class="utton" href="booking.php?id=<?php echo $res;?>">Book Now</a>
                         </div>
                     </div>
                 </form>
@@ -399,7 +672,6 @@ $recommendedIds = array_column(array_column($recommendedVehicles, 'vehicle'), 'V
 
     <!-- Other Vehicles Section -->
     <?php
-        // Display non-recommended vehicles
         $hasOtherVehicles = false;
         foreach ($vehicleData as $result) {
             if (!in_array($result['VEHICLE_ID'], $recommendedIds)) {
@@ -410,17 +682,17 @@ $recommendedIds = array_column(array_column($recommendedVehicles, 'vehicle'), 'V
     ?>
     <?php if ($hasOtherVehicles): ?>
     <div class="other-vehicles-section">
-        <h2>Other Vehicles</h2>
+        <h2>Explore More Vehicles</h2>
         <ul class="de">
             <?php foreach ($vehicleData as $result): 
                 $res = $result['VEHICLE_ID'];
                 if (!in_array($res, $recommendedIds)):
             ?>
-            <li class="vehicle-item" data-name="<?php echo htmlspecialchars(strtolower($result['VEHICLE_NAME'])); ?>" data-type="<?php echo htmlspecialchars(strtolower($result['VEHICLE_TYPE'])); ?>">
+            <li class="vehicle-item visible" data-name="<?php echo htmlspecialchars(strtolower($result['VEHICLE_NAME'])); ?>" data-type="<?php echo htmlspecialchars(strtolower($result['VEHICLE_TYPE'])); ?>">
                 <form method="POST">
                     <div class="box">
                         <div class="imgBx">
-                            <img src="images/<?php echo $result['VEHICLE_IMG']?>">
+                            <img src="images/<?php echo $result['VEHICLE_IMG']?>" alt="<?php echo $result['VEHICLE_NAME']?>">
                         </div>
                         <div class="content">
                             <h1><?php echo $result['VEHICLE_NAME']?></h1>
@@ -428,9 +700,7 @@ $recommendedIds = array_column(array_column($recommendedVehicles, 'vehicle'), 'V
                             <h2>Capacity: <a><?php echo $result['CAPACITY']?></a></h2>
                             <h2>Rent Per Day: <a>Rs<?php echo $result['PRICE']?>/-</a></h2>
                             <h2>Vehicle Type: <a><?php echo $result['VEHICLE_TYPE']?></a></h2>
-                            <button type="submit" name="booknow" class="utton" style="margin-top: 5px;">
-                                <a href="booking.php?id=<?php echo $res;?>">Book</a>
-                            </button>
+                            <a class="utton" href="booking.php?id=<?php echo $res;?>">Book Now</a>
                         </div>
                     </div>
                 </form>
@@ -442,25 +712,36 @@ $recommendedIds = array_column(array_column($recommendedVehicles, 'vehicle'), 'V
     <?php endif; ?>
 </div>
 
-    <footer>
-        <p>&copy; 2024 VeloRent. All Rights Reserved.</p>
-        <div class="socials">
-            <a href="https://www.facebook.com/thomasbhattrai" target="_blank"><ion-icon name="logo-facebook"></ion-icon></a>
-            <a href="https://x.com/thomashbhattarai" target="_blank"><ion-icon name="logo-twitter"></ion-icon></a>
-            <a href="https://www.instagram.com/swostimakaju/" target="_blank"><ion-icon name="logo-instagram"></ion-icon></a>
-        </div>
-    </footer>
+<footer>
+    <p>&copy; 2024 VeloRent. All Rights Reserved.</p>
+    <div class="socials">
+        <a href="https://www.facebook.com/thomasbhattrai" target="_blank"><ion-icon name="logo-facebook"></ion-icon></a>
+        <a href="https://x.com/thomashbhattarai" target="_blank"><ion-icon name="logo-twitter"></ion-icon></a>
+        <a href="https://www.instagram.com/swostimakaju/" target="_blank"><ion-icon name="logo-instagram"></ion-icon></a>
+    </div>
+</footer>
 
 <script src="https://unpkg.com/ionicons@5.4.0/dist/ionicons.js"></script>
 <script>
+    // Loading animation
+    // Graceful loader hide with fallback
+    (function() {
+        const loading = document.querySelector('.loading');
+        const hide = () => loading && loading.classList.add('hidden');
+        window.addEventListener('load', () => setTimeout(hide, 300));
+        document.addEventListener('DOMContentLoaded', () => setTimeout(hide, 800));
+        // Safety: force hide after 2s in case resources stall
+        setTimeout(hide, 2000);
+    })();
+
     let selectedType = '';
 
-    // Initialize page with all vehicles visible
+    // Initialize page
     document.addEventListener('DOMContentLoaded', function() {
         const searchInput = document.getElementById('searchInput');
         const vehicleItems = document.querySelectorAll('.vehicle-item');
 
-        // Show all vehicles initially
+        // Show all initially
         vehicleItems.forEach(item => item.classList.add('visible'));
 
         // Search functionality
@@ -479,9 +760,8 @@ $recommendedIds = array_column(array_column($recommendedVehicles, 'vehicle'), 'V
         const dropdown = dropdowns[type];
         const otherDropdown = type === 'type' ? dropdowns['price'] : dropdowns['type'];
         
-        // Toggle the selected dropdown, close the other
         dropdown.classList.toggle('show');
-        otherDropdown.classList.remove('show');
+        if (otherDropdown) otherDropdown.classList.remove('show');
     }
 
     // Filter by vehicle type
@@ -489,12 +769,10 @@ $recommendedIds = array_column(array_column($recommendedVehicles, 'vehicle'), 'V
         selectedType = type.toLowerCase();
         const searchInput = document.getElementById('searchInput');
         filterVehicles(searchInput.value.toLowerCase().trim(), selectedType);
-        
-        // Close the dropdown
         document.getElementById('typeFilterDropdown').classList.remove('show');
     }
 
-    // Combined filtering function
+    // Combined filtering
     function filterVehicles(searchTerm, vehicleType) {
         const vehicleItems = document.querySelectorAll('.vehicle-item');
 
@@ -513,7 +791,7 @@ $recommendedIds = array_column(array_column($recommendedVehicles, 'vehicle'), 'V
         });
     }
 
-    // Close dropdown when clicking outside
+    // Close dropdown on outside click
     window.onclick = function(event) {
         if (!event.target.closest('.filter-button') && !event.target.closest('.filter-dropdown')) {
             document.getElementById('typeFilterDropdown').classList.remove('show');
