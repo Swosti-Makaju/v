@@ -244,7 +244,7 @@
             border: none;
             border-radius: 12px;
             background: rgba(218, 220, 222, 0.73);
-            color: #fff;
+            color: #030303ff;
             font-size: 1rem;
             outline: none;
             transition: all 0.3s ease;
