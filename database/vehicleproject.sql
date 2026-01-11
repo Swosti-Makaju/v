@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Sep 23, 2025 at 05:32 PM
+-- Generation Time: Jan 09, 2026 at 02:17 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -37,7 +37,7 @@ CREATE TABLE `admin` (
 --
 
 INSERT INTO `admin` (`ADMIN_ID`, `ADMIN_PASSWORD`) VALUES
-('ADMIN', 'ADMIN');
+('ADMIN', '$2y$10$aqL3vJgOkkZCzRDua6sF5.w305W7YOtUH1CkPu6YZhBOm5lOVnuD.');
 
 -- --------------------------------------------------------
 
@@ -65,7 +65,9 @@ CREATE TABLE `booking` (
 --
 
 INSERT INTO `booking` (`BOOK_ID`, `VEHICLE_ID`, `EMAIL`, `BOOK_PLACE`, `BOOK_DATE`, `DURATION`, `PHONE_NUMBER`, `DESTINATION`, `RETURN_DATE`, `PRICE`, `BOOK_STATUS`, `FINE`) VALUES
-(104, 38, 'thomasbhattarai@gmail.com', 'Bhaktapur', '2025-09-25', 8, 9860741579, 'Bhaktapur', '2025-10-03', 7200, 'APPROVED', 0.00);
+(108, 29, 'thomasbhattarai@gmail.com', 'bhaktapur', '2026-01-09', 3, 9860741579, 'ktm', '2026-01-12', 1568, 'RETURNED', 0.00),
+(109, 29, 'thomasbhattarai@gmail.com', 'bhaktapur', '2026-01-09', 1, 9860741579, 'ktm', '2026-01-10', 550, 'RETURNED', 0.00),
+(110, 30, 'thomasbhattarai@gmail.com', 'bhaktapur', '2026-01-09', 2, 9860741579, 'ktm', '2026-01-11', 1176, 'RETURNED', 0.00);
 
 -- --------------------------------------------------------
 
@@ -89,6 +91,71 @@ INSERT INTO `feedback` (`FED_ID`, `EMAIL`, `COMMENT`) VALUES
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `reviews`
+--
+
+CREATE TABLE `reviews` (
+  `REVIEW_ID` int(11) NOT NULL,
+  `VEHICLE_ID` int(11) NOT NULL,
+  `EMAIL` varchar(255) NOT NULL,
+  `COMMENT` text NOT NULL,
+  `RATING` tinyint(4) DEFAULT NULL,
+  `CREATED_AT` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `reviews`
+--
+
+INSERT INTO `reviews` (`REVIEW_ID`, `VEHICLE_ID`, `EMAIL`, `COMMENT`, `RATING`, `CREATED_AT`) VALUES
+(1, 29, 'thomasbhattarai@gmail.com', 'damnnnnn', 5, '2026-01-09 12:38:42'),
+(2, 30, 'thomasbhattarai@gmail.com', '', 1, '2026-01-09 12:43:09');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `settings`
+--
+
+CREATE TABLE `settings` (
+  `k` varchar(50) NOT NULL,
+  `val` varchar(255) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `settings`
+--
+
+INSERT INTO `settings` (`k`, `val`) VALUES
+('contact_mail', 'admin@velorent.com'),
+('contact_phone', '+977-9800000000'),
+('currency', 'Rs'),
+('late_fee', '0'),
+('logo_text', 'VeloRent Admin'),
+('min_hours', '1'),
+('site_name', 'VeloRent'),
+('tax_percent', '0');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `tour_packages`
+--
+
+CREATE TABLE `tour_packages` (
+  `id` int(11) NOT NULL,
+  `tour_name` varchar(100) NOT NULL,
+  `destination` varchar(100) NOT NULL,
+  `duration_days` int(11) NOT NULL,
+  `vehicle_type` varchar(50) NOT NULL,
+  `total_price` decimal(10,2) NOT NULL,
+  `description` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `users`
 --
 
@@ -107,9 +174,11 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`FNAME`, `LNAME`, `EMAIL`, `LIC_NUM`, `PHONE_NUMBER`, `PASSWORD`, `GENDER`) VALUES
+('Thomas', 'Bhattarai', 'alexx@gmail.com', '7494964', 9498645, '$2y$10$cGRbUwA58GkqzMeT/42Uy.PlNN.WOkHktnh7w9..I3sXZViPEUhPW', 'male'),
 ('hello', 'there', 'ram@gmail.com', '7777', 9841502866, 'f4bd9049fce4157a55551da9a966015c', 'male'),
+('Suman', 'Bhattarai', 'suman@gmail.com', '123', 9813689305, '$2y$10$y1u83wNDEb62bA3xovJG1eFFSEG/KGaFykF6rj98Oam1aJ4omH4Nq', 'male'),
 ('Swosti', 'Makaju', 'swosti@gmail.com', '45', 986074188, '87ea4bf94165a8a11fe93328b27127db', 'female'),
-('Thomas', 'Bhattarai', 'thomasbhattarai@gmail.com', '54545454', 9860741579, '2fef4d4e66fb6538790b4639aa6b6a0e', 'male');
+('Thomas', 'Bhattarai', 'thomasbhattarai@gmail.com', '54545454', 9860741579, '$2y$10$26eUh5xFwpvZ9wLEThTw5.d7AspDhBKRzWtSt7fHwMVvHknjs1viu', 'male');
 
 -- --------------------------------------------------------
 
@@ -190,6 +259,26 @@ ALTER TABLE `feedback`
   ADD KEY `TEST` (`EMAIL`);
 
 --
+-- Indexes for table `reviews`
+--
+ALTER TABLE `reviews`
+  ADD PRIMARY KEY (`REVIEW_ID`),
+  ADD KEY `idx_vehicle` (`VEHICLE_ID`),
+  ADD KEY `idx_created` (`CREATED_AT`);
+
+--
+-- Indexes for table `settings`
+--
+ALTER TABLE `settings`
+  ADD PRIMARY KEY (`k`);
+
+--
+-- Indexes for table `tour_packages`
+--
+ALTER TABLE `tour_packages`
+  ADD PRIMARY KEY (`id`);
+
+--
 -- Indexes for table `users`
 --
 ALTER TABLE `users`
@@ -209,13 +298,25 @@ ALTER TABLE `vehicles`
 -- AUTO_INCREMENT for table `booking`
 --
 ALTER TABLE `booking`
-  MODIFY `BOOK_ID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=105;
+  MODIFY `BOOK_ID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=111;
 
 --
 -- AUTO_INCREMENT for table `feedback`
 --
 ALTER TABLE `feedback`
   MODIFY `FED_ID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+
+--
+-- AUTO_INCREMENT for table `reviews`
+--
+ALTER TABLE `reviews`
+  MODIFY `REVIEW_ID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+
+--
+-- AUTO_INCREMENT for table `tour_packages`
+--
+ALTER TABLE `tour_packages`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `vehicles`
@@ -233,23 +334,7 @@ ALTER TABLE `vehicles`
 ALTER TABLE `booking`
   ADD CONSTRAINT `booking_ibfk_1` FOREIGN KEY (`VEHICLE_ID`) REFERENCES `vehicles` (`VEHICLE_ID`) ON DELETE CASCADE ON UPDATE CASCADE,
   ADD CONSTRAINT `booking_ibfk_2` FOREIGN KEY (`EMAIL`) REFERENCES `users` (`EMAIL`) ON DELETE CASCADE ON UPDATE CASCADE;
-
-
-CREATE TABLE IF NOT EXISTS settings (
-  k VARCHAR(50) PRIMARY KEY,
-  val VARCHAR(255) NOT NULL
-);
-
-INSERT INTO settings (k,val) VALUES
-('site_name','VeloRent'),
-('logo_text','VeloRent Admin'),
-('contact_mail','admin@velorent.com'),
-('contact_phone','+977-9800000000'),
-('currency','Rs'),
-('min_hours','1'),
-('tax_percent','0'),
-('late_fee','0')
-ON DUPLICATE KEY UPDATE val=val;
+COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
