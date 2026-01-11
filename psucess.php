@@ -28,8 +28,8 @@ if ($payment_verified) {
     
     try {
         // Insert into database only after successful payment verification
-        $sql = "INSERT INTO booking (VEHICLE_ID, EMAIL, BOOK_PLACE, BOOK_DATE, DURATION, PHONE_NUMBER, DESTINATION, PRICE, RETURN_DATE) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        $sql = "INSERT INTO booking (VEHICLE_ID, EMAIL, BOOK_PLACE, BOOK_DATE, DURATION, PHONE_NUMBER, DESTINATION, PRICE, RETURN_DATE, BOOK_STATUS) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'PAID')";
         
         $stmt = mysqli_prepare($con, $sql);
         mysqli_stmt_bind_param($stmt, "issssisss", 

@@ -1,6 +1,11 @@
 <?php
-// Buffer output so redirects can happen even after markup starts
-ob_start();
+session_start();
+// Check if user is logged in
+if (!isset($_SESSION['email'])) {
+    header("location: index.php");
+    exit();
+}
+$email = $_SESSION['email'];
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -78,8 +83,9 @@ ob_start();
         }
 
         .nn {
-            background: linear-gradient(45deg, #3498db, #764ba2           background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-);
+            background: linear-gradient(45deg, #3498db, #764ba2);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+
             border: none;
             padding: 10px 20px;
             border-radius: 50px;
@@ -95,6 +101,35 @@ ob_start();
         .nn:hover {
             transform: translateY(-3px);
             box-shadow: 0 5px 15px rgba(64, 102, 178, 0.4);
+        }
+
+        /* Hamburger Menu */
+        .hamburger {
+            display: none;
+            flex-direction: column;
+            cursor: pointer;
+            z-index: 1001;
+        }
+
+        .hamburger span {
+            width: 30px;
+            height: 3px;
+            background: #193959ff;
+            margin: 4px 0;
+            transition: 0.3s;
+            border-radius: 2px;
+        }
+
+        .hamburger.active span:nth-child(1) {
+            transform: rotate(45deg) translate(5px, 5px);
+        }
+
+        .hamburger.active span:nth-child(2) {
+            opacity: 0;
+        }
+
+        .hamburger.active span:nth-child(3) {
+            transform: rotate(-45deg) translate(7px, -6px);
         }
 
         /* Search & Filter Bar */
@@ -134,8 +169,8 @@ ob_start();
         }
 
         .filter-button {
-            background: linear-gradient(45deg, #3498db, #764ba2           background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-);
+            background: linear-gradient(45deg, #3498db, #764ba2);        
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: #221f1fff;
             border: none;
             padding: 12px 20px;
@@ -349,6 +384,49 @@ ob_start();
 
         /* Responsive */
         @media (max-width: 768px) {
+            .hamburger {
+                display: flex;
+            }
+
+            .menu {
+                position: fixed;
+                top: 0;
+                right: -100%;
+                width: 100%;
+                max-width: 300px;
+                height: 100vh;
+                background: rgba(255, 255, 255, 0.98);
+                backdrop-filter: blur(10px);
+                flex-direction: column;
+                justify-content: flex-start;
+                padding-top: 80px;
+                transition: right 0.4s ease;
+                z-index: 1000;
+                box-shadow: -5px 0 20px rgba(0, 0, 0, 0.1);
+                overflow-y: auto;
+            }
+
+            .menu.active {
+                right: 0;
+            }
+
+            .menu ul {
+                flex-direction: column;
+                align-items: flex-start;
+                width: 100%;
+                padding: 0 30px;
+                gap: 0;
+            }
+
+            .menu li {
+                margin: 20px 0;
+                width: 100%;
+            }
+
+            .menu a, .menu p {
+                display: block;
+            }
+
             .search-filter {
                 flex-direction: column;
                 gap: 15px;
@@ -407,193 +485,54 @@ ob_start();
     
     $vehicles = mysqli_query($con, $sql2);
     
-    // Get user's booking history for recommendations (with error handling)
-    $bookingHistory = [];
-    $userId = isset($rows['USER_ID']) ? $rows['USER_ID'] : null;
-    
-    if ($userId) {
-        // Check if bookings table exists
-        $tableCheck = mysqli_query($con, "SHOW TABLES LIKE 'bookings'");
-        if(mysqli_num_rows($tableCheck) > 0) {
-            $historyQuery = "SELECT v.VEHICLE_TYPE, v.FUEL_TYPE FROM bookings b 
-                             JOIN vehicles v ON b.VEHICLE_ID = v.VEHICLE_ID 
-                             WHERE b.USER_ID = '$userId'";
-            $historyResult = mysqli_query($con, $historyQuery);
-            if($historyResult) {
-                while($history = mysqli_fetch_assoc($historyResult)) {
-                    $bookingHistory[] = $history;
-                }
+    // Pull most booked vehicle per category (e.g., Car/Bike/Scooter) for recommendations
+    $recommendedReturned = [];
+    $topBookedSql = "SELECT v.*, COUNT(b.BOOK_ID) AS BOOK_COUNT
+                     FROM vehicles v
+                     LEFT JOIN booking b ON b.VEHICLE_ID = v.VEHICLE_ID AND b.BOOK_STATUS <> 'Canceled'
+                     GROUP BY v.VEHICLE_ID
+                     ORDER BY BOOK_COUNT DESC, v.VEHICLE_ID DESC";
+
+    if ($topResult = mysqli_query($con, $topBookedSql)) {
+        $byType = [];
+        while ($row = mysqli_fetch_assoc($topResult)) {
+            $typeKey = strtolower($row['VEHICLE_TYPE']);
+            // Only take the first (highest booked) vehicle per category with at least 1 booking
+            if (!isset($byType[$typeKey]) && (int)$row['BOOK_COUNT'] > 0) {
+                $byType[$typeKey] = $row;
             }
+        }
+        $recommendedReturned = array_values($byType);
+    }
+
+    // Collect public reviews to display under vehicles
+    mysqli_query($con, "CREATE TABLE IF NOT EXISTS reviews (
+        REVIEW_ID INT AUTO_INCREMENT PRIMARY KEY,
+        VEHICLE_ID INT NOT NULL,
+        EMAIL VARCHAR(255) NOT NULL,
+        COMMENT TEXT NOT NULL,
+        RATING TINYINT NULL,
+        CREATED_AT TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_vehicle (VEHICLE_ID),
+        INDEX idx_created (CREATED_AT)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+    $reviewsByVehicle = [];
+    $reviewsQuery = mysqli_query($con, "SELECT r.VEHICLE_ID, r.COMMENT, r.RATING, r.CREATED_AT, u.FNAME, u.LNAME
+                                         FROM reviews r
+                                         LEFT JOIN users u ON r.EMAIL = u.EMAIL
+                                         ORDER BY r.CREATED_AT DESC");
+    if ($reviewsQuery) {
+        while ($rev = mysqli_fetch_assoc($reviewsQuery)) {
+            $reviewsByVehicle[$rev['VEHICLE_ID']][] = $rev;
         }
     }
 
-    // Store vehicle data for recommendation algorithm
+    // Store vehicle data for display
     $vehicleData = [];
     while($result = mysqli_fetch_array($vehicles)) {
         $vehicleData[] = $result;
     }
-
-    /* which vehicles are currently booked? */
-$bookedIds = [];
-$today = date('Y-m-d');
-$bkQ = mysqli_query($con,
- "SELECT DISTINCT VEHICLE_ID
-  FROM booking
-  WHERE BOOK_STATUS IN ('APPROVED','PENDING')
-    AND (BOOK_DATE <= '$today' AND RETURN_DATE >= '$today')");
-while ($b = mysqli_fetch_assoc($bkQ)) {
-    $bookedIds[] = $b['VEHICLE_ID'];
-}
-    
-// Recommendation Algorithm
-$recommendedVehicles = [];
-$categories = ['Car', 'Bike', 'Scooter'];
-
-// Function to calculate similarity between two users based on booking history
-function calculateUserSimilarity($userHistory, $otherUserHistory) {
-    $similarity = 0;
-    foreach ($userHistory as $userBooking) {
-        foreach ($otherUserHistory as $otherBooking) {
-            if (strtolower($userBooking['VEHICLE_TYPE']) === strtolower($otherBooking['VEHICLE_TYPE'])) {
-                $similarity += 10; // Weight for vehicle type match
-            }
-            if (strtolower($userBooking['FUEL_TYPE']) === strtolower($otherBooking['FUEL_TYPE'])) {
-                $similarity += 5; // Weight for fuel type match
-            }
-        }
-    }
-    return $similarity;
-}
-
-// Get booking history for all users (for collaborative filtering and popularity)
-$allUsersHistory = [];
-$vehiclePopularity = []; // Track booking frequency per vehicle
-if ($userId && mysqli_num_rows(mysqli_query($con, "SHOW TABLES LIKE 'bookings'")) > 0) {
-    $allUsersQuery = "SELECT b.USER_ID, b.VEHICLE_ID, v.VEHICLE_TYPE, v.FUEL_TYPE, v.CAPACITY, v.PRICE, b.BOOKING_DATE 
-                     FROM bookings b 
-                     JOIN vehicles v ON b.VEHICLE_ID = v.VEHICLE_ID";
-    $allUsersResult = mysqli_query($con, $allUsersQuery);
-    if ($allUsersResult) {
-        while ($row = mysqli_fetch_assoc($allUsersResult)) {
-            $allUsersHistory[$row['USER_ID']][] = [
-                'VEHICLE_ID' => $row['VEHICLE_ID'],
-                'VEHICLE_TYPE' => $row['VEHICLE_TYPE'],
-                'FUEL_TYPE' => $row['FUEL_TYPE'],
-                'CAPACITY' => $row['CAPACITY'],
-                'PRICE' => $row['PRICE'],
-                'BOOKING_DATE' => $row['BOOKING_DATE']
-            ];
-            // Increment popularity score
-            $vehiclePopularity[$row['VEHICLE_ID']] = ($vehiclePopularity[$row['VEHICLE_ID']] ?? 0) + 1;
-        }
-    }
-}
-
-// Score vehicles
-$scoredVehicles = [];
-foreach ($vehicleData as $vehicle) {
-    $score = 0;
-
-    if (!empty($bookingHistory)) {
-        // Content-based scoring (based on user's booking history)
-        foreach ($bookingHistory as $history) {
-            if (strtolower($history['VEHICLE_TYPE']) === strtolower($vehicle['VEHICLE_TYPE'])) {
-                $score += 15; // Higher weight for vehicle type match
-            }
-            if (strtolower($history['FUEL_TYPE']) === strtolower($vehicle['FUEL_TYPE'])) {
-                $score += 8; // Weight for fuel type match
-            }
-            if (isset($vehicle['CAPACITY']) && isset($history['CAPACITY']) && 
-                abs($vehicle['CAPACITY'] - $history['CAPACITY']) <= 2) {
-                $score += 5; // Weight for similar capacity
-            }
-        }
-
-        // Collaborative filtering: score based on similar users' bookings
-        $similarUsers = [];
-        foreach ($allUsersHistory as $otherUserId => $otherHistory) {
-            if ($otherUserId != $userId) {
-                $similarity = calculateUserSimilarity($bookingHistory, $otherHistory);
-                if ($similarity > 0) {
-                    $similarUsers[$otherUserId] = $similarity;
-                }
-            }
-        }
-        arsort($similarUsers); // Sort users by similarity descending
-        $topSimilarUsers = array_slice($similarUsers, 0, 3, true); // Top 3 similar users
-
-        foreach ($topSimilarUsers as $similarUserId => $similarity) {
-            foreach ($allUsersHistory[$similarUserId] as $similarBooking) {
-                if ($similarBooking['VEHICLE_ID'] == $vehicle['VEHICLE_ID']) {
-                    $score += $similarity * 0.7; // Higher weight for exact vehicle match
-                } elseif (strtolower($similarBooking['VEHICLE_TYPE']) === strtolower($vehicle['VEHICLE_TYPE'])) {
-                    $score += $similarity * 0.5; // Weight for vehicle type match
-                }
-                if (strtolower($similarBooking['FUEL_TYPE']) === strtolower($vehicle['FUEL_TYPE'])) {
-                    $score += $similarity * 0.3; // Weight for fuel type match
-                }
-            }
-        }
-
-        // Price preference (favor vehicles closer to average price of bookings)
-        $avgBookingPrice = array_sum(array_column($bookingHistory, 'PRICE') ?: [0]) / (count($bookingHistory) ?: 1);
-        if ($avgBookingPrice > 0 && abs($vehicle['PRICE'] - $avgBookingPrice) < 500) {
-            $score += 5; // Weight for price proximity
-        }
-
-        // Recency bias (if booking date is available)
-        foreach ($bookingHistory as $history) {
-            if (isset($history['BOOKING_DATE']) && $history['VEHICLE_ID'] == $vehicle['VEHICLE_ID']) {
-                $bookingDate = new DateTime($history['BOOKING_DATE']);
-                $now = new DateTime();
-                $daysDiff = $now->diff($bookingDate)->days;
-                if ($daysDiff <= 30) {
-                    $score += 10 / ($daysDiff + 1); // Higher score for recent bookings
-                }
-            }
-        }
-    } else {
-        // For users without booking history
-        // Content-based scoring: favor premium or eco-friendly vehicles
-        $avgPrice = array_sum(array_column($vehicleData, 'PRICE')) / count($vehicleData);
-        if ($vehicle['PRICE'] > $avgPrice) {
-            $score += 5; // Favor "premium" vehicles
-        }
-        if (strtolower($vehicle['FUEL_TYPE']) === 'electric') {
-            $score += 7; // Favor eco-friendly vehicles
-        }
-        if ($vehicle['CAPACITY'] >= 4) {
-            $score += 3; // Favor higher capacity
-        }
-    }
-
-    // Popularity-based scoring
-    $popularityScore = $vehiclePopularity[$vehicle['VEHICLE_ID']] ?? 0;
-    $score += $popularityScore * (!empty($bookingHistory) ? 3 : 5); // Higher weight for new users
-
-    $scoredVehicles[] = ['vehicle' => $vehicle, 'score' => $score];
-}
-
-// Select one vehicle per category
-$categoryVehicles = [];
-foreach ($categories as $category) {
-    $categoryVehicles[$category] = array_filter($scoredVehicles, function($v) use ($category) {
-        return strtolower($v['vehicle']['VEHICLE_TYPE']) === strtolower($category);
-    });
-    usort($categoryVehicles[$category], function($a, $b) {
-        return $b['score'] - $a['score'];
-    });
-}
-
-// Add top vehicle from each category to recommendations
-foreach ($categories as $category) {
-    if (!empty($categoryVehicles[$category])) {
-        $recommendedVehicles[] = $categoryVehicles[$category][0];
-    }
-}
-
-// Extract recommended vehicle IDs
-$recommendedIds = array_column(array_column($recommendedVehicles, 'vehicle'), 'VEHICLE_ID');
 ?>
 
 <div class="cd">
@@ -601,11 +540,20 @@ $recommendedIds = array_column(array_column($recommendedVehicles, 'vehicle'), 'V
         <div class="icon">
             <a href="vehiclesdetails.php"><img style="height: 50px;" src="images/icon.png" alt="VeloRent Logo"></a>
         </div>
-        <div class="menu">
+        
+        <!-- Hamburger Menu -->
+        <div class="hamburger" id="hamburger">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+        
+        <div class="menu" id="menu">
             <ul>
                 <li><p class="phello"><a id="pname" href="userprofile.php" style="cursor: pointer;"><?php echo htmlspecialchars($rows['FNAME'].' '.$rows['LNAME']); ?></a></p></li>
                 <li><a id="stat" href="bookingstatus.php">BOOKING STATUS</a></li>
-                <li><button class="nn"><a href="index.php">LOGOUT</a></button></li>
+                <li><a id="vehicles" href="vehiclesdetails.php">VEHICLES</a></li>
+                <li><a href="index.php">LOGOUT</a></li>
             </ul>
         </div>
     </nav>
@@ -638,13 +586,12 @@ $recommendedIds = array_column(array_column($recommendedVehicles, 'vehicle'), 'V
 
     <h1 class="overview">OUR VEHICLE OVERVIEW</h1>
 
-    <!-- Recommended Vehicles Section -->
-    <?php if (!empty($recommendedVehicles)): ?>
+    <!-- Top booked vehicle per category -->
+    <?php if (!empty($recommendedReturned)): ?>
     <div class="recommended-section">
-        <h2>Recommended For You</h2>
+        <h2>Most Booked By Category</h2>
         <ul class="de">
-            <?php foreach ($recommendedVehicles as $recVehicle): 
-                $vehicle = $recVehicle['vehicle'];
+            <?php foreach ($recommendedReturned as $vehicle):
                 $res = $vehicle['VEHICLE_ID'];
             ?>
             <li class="vehicle-item visible" data-name="<?php echo htmlspecialchars(strtolower($vehicle['VEHICLE_NAME'])); ?>" data-type="<?php echo htmlspecialchars(strtolower($vehicle['VEHICLE_TYPE'])); ?>">
@@ -652,7 +599,7 @@ $recommendedIds = array_column(array_column($recommendedVehicles, 'vehicle'), 'V
                     <div class="box">
                         <div class="imgBx">
                             <img src="images/<?php echo $vehicle['VEHICLE_IMG']?>" alt="<?php echo $vehicle['VEHICLE_NAME']?>">
-                            <div class="recommended-badge">RECOMMENDED</div>
+                            <div class="recommended-badge">Recommended</div>
                         </div>
                         <div class="content">
                             <h1><?php echo $vehicle['VEHICLE_NAME']?></h1>
@@ -661,6 +608,27 @@ $recommendedIds = array_column(array_column($recommendedVehicles, 'vehicle'), 'V
                             <h2>Rent Per Day: <a>Rs<?php echo $vehicle['PRICE']?>/-</a></h2>
                             <h2>Vehicle Type: <a><?php echo $vehicle['VEHICLE_TYPE']?></a></h2>
                             <a class="utton" href="booking.php?id=<?php echo $res;?>">Book Now</a>
+                            <?php if (!empty($reviewsByVehicle[$res])): ?>
+                                <div style="margin-top:16px; text-align:left;">
+                                    <h3 style="font-size:1rem; margin-bottom:8px; color:#34495e;">Recent Reviews</h3>
+                                    <?php foreach (array_slice($reviewsByVehicle[$res], 0, 2) as $rev): ?>
+                                        <div style="padding:8px 10px; background:rgba(0,0,0,0.03); border-radius:8px; margin-bottom:8px;">
+                                            <div style="font-weight:600; font-size:0.95rem; color:#2c3e50;">
+                                                <?php echo htmlspecialchars(trim(($rev['FNAME'] ?? '').' '.($rev['LNAME'] ?? 'User'))); ?>
+                                                <?php if (!empty($rev['RATING'])): ?>
+                                                    <span style="color:#f39c12; margin-left:6px;">★ <?php echo (int)$rev['RATING']; ?></span>
+                                                <?php endif; ?>
+                                            </div>
+                                            <div style="font-size:0.9rem; color:#555; margin-top:4px;">
+                                                <?php echo nl2br(htmlspecialchars($rev['COMMENT'])); ?>
+                                            </div>
+                                            <div style="font-size:0.8rem; color:#888; margin-top:4px;">
+                                                <?php echo htmlspecialchars(date('M d, Y', strtotime($rev['CREATED_AT']))); ?>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </form>
@@ -670,23 +638,13 @@ $recommendedIds = array_column(array_column($recommendedVehicles, 'vehicle'), 'V
     </div>
     <?php endif; ?>
 
-    <!-- Other Vehicles Section -->
-    <?php
-        $hasOtherVehicles = false;
-        foreach ($vehicleData as $result) {
-            if (!in_array($result['VEHICLE_ID'], $recommendedIds)) {
-                $hasOtherVehicles = true;
-                break;
-            }
-        }
-    ?>
-    <?php if ($hasOtherVehicles): ?>
+    <!-- Vehicles Section -->
+    <?php if (!empty($vehicleData)): ?>
     <div class="other-vehicles-section">
-        <h2>Explore More Vehicles</h2>
+        <h2>Available Vehicles</h2>
         <ul class="de">
             <?php foreach ($vehicleData as $result): 
                 $res = $result['VEHICLE_ID'];
-                if (!in_array($res, $recommendedIds)):
             ?>
             <li class="vehicle-item visible" data-name="<?php echo htmlspecialchars(strtolower($result['VEHICLE_NAME'])); ?>" data-type="<?php echo htmlspecialchars(strtolower($result['VEHICLE_TYPE'])); ?>">
                 <form method="POST">
@@ -701,14 +659,36 @@ $recommendedIds = array_column(array_column($recommendedVehicles, 'vehicle'), 'V
                             <h2>Rent Per Day: <a>Rs<?php echo $result['PRICE']?>/-</a></h2>
                             <h2>Vehicle Type: <a><?php echo $result['VEHICLE_TYPE']?></a></h2>
                             <a class="utton" href="booking.php?id=<?php echo $res;?>">Book Now</a>
+                            <?php if (!empty($reviewsByVehicle[$res])): ?>
+                                <div style="margin-top:16px; text-align:left;">
+                                    <h3 style="font-size:1rem; margin-bottom:8px; color:#34495e;">Recent Reviews</h3>
+                                    <?php foreach (array_slice($reviewsByVehicle[$res], 0, 2) as $rev): ?>
+                                        <div style="padding:8px 10px; background:rgba(0,0,0,0.03); border-radius:8px; margin-bottom:8px;">
+                                            <div style="font-weight:600; font-size:0.95rem; color:#2c3e50;">
+                                                <?php echo htmlspecialchars(trim(($rev['FNAME'] ?? '').' '.($rev['LNAME'] ?? 'User'))); ?>
+                                                <?php if (!empty($rev['RATING'])): ?>
+                                                    <span style="color:#f39c12; margin-left:6px;">★ <?php echo (int)$rev['RATING']; ?></span>
+                                                <?php endif; ?>
+                                            </div>
+                                            <div style="font-size:0.9rem; color:#555; margin-top:4px;">
+                                                <?php echo nl2br(htmlspecialchars($rev['COMMENT'])); ?>
+                                            </div>
+                                            <div style="font-size:0.8rem; color:#888; margin-top:4px;">
+                                                <?php echo htmlspecialchars(date('M d, Y', strtotime($rev['CREATED_AT']))); ?>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </form>
             </li>
-            <?php endif; ?>
             <?php endforeach; ?>
         </ul>
     </div>
+    <?php else: ?>
+        <p style="text-align:center; margin:40px 0;">No vehicles available right now.</p>
     <?php endif; ?>
 </div>
 
@@ -798,6 +778,41 @@ $recommendedIds = array_column(array_column($recommendedVehicles, 'vehicle'), 'V
             document.getElementById('priceFilterDropdown').classList.remove('show');
         }
     }
+
+    // Hamburger menu toggle
+    const hamburger = document.getElementById('hamburger');
+    const menu = document.getElementById('menu');
+
+    hamburger.addEventListener('click', function() {
+        hamburger.classList.toggle('active');
+        menu.classList.toggle('active');
+        
+        // Prevent scrolling when menu is open
+        if(menu.classList.contains('active')) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = 'auto';
+        }
+    });
+
+    // Close menu when clicking on a link
+    const menuLinks = document.querySelectorAll('.menu a');
+    menuLinks.forEach(link => {
+        link.addEventListener('click', function() {
+            hamburger.classList.remove('active');
+            menu.classList.remove('active');
+            document.body.style.overflow = 'auto';
+        });
+    });
+
+    // Close menu when clicking outside
+    document.addEventListener('click', function(event) {
+        if (!menu.contains(event.target) && !hamburger.contains(event.target)) {
+            hamburger.classList.remove('active');
+            menu.classList.remove('active');
+            document.body.style.overflow = 'auto';
+        }
+    });
 </script>
 </body>
 </html>

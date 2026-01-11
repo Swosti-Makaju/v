@@ -53,11 +53,10 @@ if (isset($_POST['book'])) {
     $bplace = mysqli_real_escape_string($con, $_POST['place']);
     $bdate = date('Y-m-d', strtotime($_POST['date']));
     $dur = (int)$_POST['dur']; // Ensure duration is integer
-    $phno = mysqli_real_escape_string($con, $_POST['ph']);
     $des = mysqli_real_escape_string($con, $_POST['des']);
     $rdate = date('Y-m-d', strtotime($_POST['rdate']));
 
-    if (empty($bplace) || empty($bdate) || empty($dur) || empty($phno) || empty($des) || empty($rdate)) {
+    if (empty($bplace) || empty($bdate) || empty($dur) || empty($des) || empty($rdate)) {
         echo '<script>showDialog("Please fill all fields")</script>';
     } else {
         if ($bdate < $rdate) {
@@ -72,7 +71,7 @@ if (isset($_POST['book'])) {
                 'book_place' => $bplace,
                 'book_date' => $bdate,
                 'duration' => $dur,
-                'phone_number' => $phno,
+                'phone_number' => $user['PHONE_NUMBER'],
                 'destination' => $des,
                 'price' => $total_price,
                 'daily_price' => $dynamic_price,
@@ -196,7 +195,6 @@ if (isset($_POST['book'])) {
         input[type="text"],
         input[type="date"],
         input[type="number"],
-        input[type="tel"],
         input[type="email"],
         input[type="password"] {
             width: 100%;
@@ -382,8 +380,7 @@ if (isset($_POST['book'])) {
                 <label for="dur">DURATION (days):</label>
                 <input type="number" name="dur" id="dur" readonly>
 
-                <label for="ph">PHONE NUMBER:</label>
-                <input type="tel" name="ph" id="ph" maxlength="10" placeholder="Enter Your Phone Number" required pattern="[0-9]{10}" title="Enter a valid 10-digit phone number">
+                <!-- Phone number removed: we will use the user's saved phone from profile -->
 
                 <label for="des">DESTINATION:</label>
                 <input type="text" name="des" id="des" placeholder="Enter Your Destination" required>
@@ -529,23 +526,8 @@ if (isset($_POST['book'])) {
         document.getElementById("datefield").addEventListener('change', updatePriceAndDuration);
         document.getElementById("dfield").addEventListener('change', updatePriceAndDuration);
         
-        // Phone number validation
-        document.getElementById('ph').addEventListener('input', function(e) {
-            this.value = this.value.replace(/[^0-9]/g, '');
-            if (this.value.length > 10) {
-                this.value = this.value.slice(0, 10);
-            }
-        });
-        
         // Form submission validation
         document.getElementById('register').addEventListener('submit', function(e) {
-            const phone = document.getElementById('ph').value;
-            if (phone.length !== 10) {
-                e.preventDefault();
-                showDialog('Please enter a valid 10-digit phone number.');
-                document.getElementById('ph').focus();
-            }
-            
             const duration = document.getElementById('dur').value;
             if (!duration || duration < 1) {
                 e.preventDefault();

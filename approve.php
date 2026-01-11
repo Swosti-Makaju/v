@@ -1,27 +1,14 @@
 <?php
-header('Content-Type: application/json');
-require_once('connection.php');
-
-if (isset($_GET['id'])) {
-    $book_id = mysqli_real_escape_string($con, $_GET['id']);
-    $query = "UPDATE booking SET BOOK_STATUS = 'APPROVED' WHERE BOOK_ID = '$book_id'";
-    if (mysqli_query($con, $query)) {
-        echo json_encode(['success' => true]);
-    } else {
-        echo json_encode(['success' => false, 'error' => mysqli_error($con)]);
-    }
-} else {
-    echo json_encode(['success' => false, 'error' => 'No booking ID provided']);
-}
-mysqli_close($con);
-?>
-
-<?php
-header('Content-Type: application/json');
 require_once 'connection.php';
+session_start();
+
+if (!isset($_SESSION['admin_id'])) {
+    header('Location: adminlogin.php');
+    exit;
+}
 
 if (!isset($_GET['id'])) {
-    echo json_encode(['success' => false, 'error' => 'No booking ID provided']);
+    header('Location: adminbook.php?approved=0&error=missing');
     exit;
 }
 
@@ -30,28 +17,34 @@ $bookId = (int)$_GET['id'];
 mysqli_begin_transaction($con);
 
 try {
-    /* 1.  mark booking approved */
-    $stmt = $con->prepare("UPDATE booking SET BOOK_STATUS = 'APPROVED' WHERE BOOK_ID = ?");
-    $stmt->bind_param("i", $bookId);
-    $stmt->execute();
-    if ($stmt->affected_rows === 0) {
-        throw new Exception('Booking not found or already approved');
+    // 1) Get the vehicle for this booking
+    $get = $con->prepare("SELECT VEHICLE_ID, BOOK_STATUS FROM booking WHERE BOOK_ID = ? FOR UPDATE");
+    $get->bind_param('i', $bookId);
+    $get->execute();
+    $res = $get->get_result();
+    $row = $res->fetch_assoc();
+    if (!$row) {
+        throw new Exception('Booking not found');
     }
 
-    /* 2.  decrease available count of the vehicle that was booked */
-    $upd = $con->prepare(
-        "UPDATE vehicles v
-         JOIN booking b ON v.VEHICLE_ID = b.VEHICLE_ID
-         SET v.AVAILABLE = v.AVAILABLE - 1
-         WHERE b.BOOK_ID = ? AND v.AVAILABLE > 0"
-    );
-    $upd->bind_param("i", $bookId);
-    $upd->execute();
+    $vehicleId = (int)$row['VEHICLE_ID'];
+
+    // 2) Mark booking approved if not already
+    $updBook = $con->prepare("UPDATE booking SET BOOK_STATUS = 'APPROVED' WHERE BOOK_ID = ?");
+    $updBook->bind_param('i', $bookId);
+    $updBook->execute();
+
+    // 3) Set vehicle as not available
+    $updVeh = $con->prepare("UPDATE vehicles SET AVAILABLE = 'N' WHERE VEHICLE_ID = ?");
+    $updVeh->bind_param('i', $vehicleId);
+    $updVeh->execute();
 
     mysqli_commit($con);
-    echo json_encode(['success' => true]);
+    header('Location: adminbook.php?approved=1');
+    exit;
 } catch (Throwable $e) {
     mysqli_rollback($con);
-    echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    header('Location: adminbook.php?approved=0&error=' . urlencode($e->getMessage()));
+    exit;
 }
 ?>
