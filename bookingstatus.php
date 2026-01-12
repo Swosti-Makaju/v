@@ -557,6 +557,23 @@ function renderBookingRow($booking, $isAdmin, $con) {
                 grid-template-columns: 1fr;
             }
         }
+        .nav-btn {
+    display: inline-block;
+    padding: 12px 28px;
+    background-color: #667eea;
+    color: #ffffff;
+    text-decoration: none;
+    font-size: 16px;
+    font-weight: 600;
+    border-radius: 30px;
+    transition: all 0.3s ease;
+}
+
+.nav-btn:hover {
+    background-color: #4a5792;
+    transform: translateY(-2px);
+}
+
 
         @media (max-width: 600px) {
             .navbar {
