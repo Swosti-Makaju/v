@@ -6,6 +6,118 @@ if (!isset($_SESSION['email'])) {
     exit();
 }
 $email = $_SESSION['email'];
+
+require_once('connection.php');
+
+// Require logged-in user and load their record; redirect if missing
+$value = isset($_SESSION['email']) ? $_SESSION['email'] : null;
+if (!$value) {
+    header('Location: index.php');
+    exit;
+}
+
+$_SESSION['email'] = $value;
+$sql = "select * from users where EMAIL='$value'";
+$name = mysqli_query($con, $sql);
+$rows = ($name && ($fetched = mysqli_fetch_assoc($name))) ? $fetched : null;
+if (!$rows) {
+    header('Location: index.php');
+    exit;
+}
+
+// Handle sorting
+$sort = '';
+if (isset($_GET['sort'])) {
+    if ($_GET['sort'] == 'price_asc') {
+        $sort = ' ORDER BY PRICE ASC';
+    } elseif ($_GET['sort'] == 'price_desc') {
+        $sort = ' ORDER BY PRICE DESC';
+    }
+}
+
+$sql2 = "select * from vehicles where AVAILABLE='Y'";
+$sql2 .= $sort;
+
+$vehicles = mysqli_query($con, $sql2);
+
+// FIXED: Pull most booked vehicle per category
+$recommendedReturned = [];
+
+// Method 1: Using subquery (MySQL 5.7+)
+$topBookedSql = "SELECT v.*, 
+                 (SELECT COUNT(*) 
+                  FROM booking b 
+                  WHERE b.VEHICLE_ID = v.VEHICLE_ID 
+                  AND b.BOOK_STATUS <> 'Canceled') AS BOOK_COUNT
+                 FROM vehicles v
+                 WHERE v.AVAILABLE = 'Y'
+                 ORDER BY BOOK_COUNT DESC, v.VEHICLE_ID DESC";
+
+// Alternative Method 2: Using GROUP BY with ANY_VALUE() (MySQL 5.7.5+)
+// Uncomment this if you prefer:
+/*
+$topBookedSql = "SELECT 
+                 v.VEHICLE_ID,
+                 ANY_VALUE(v.VEHICLE_NAME) AS VEHICLE_NAME,
+                 ANY_VALUE(v.VEHICLE_TYPE) AS VEHICLE_TYPE,
+                 ANY_VALUE(v.FUEL_TYPE) AS FUEL_TYPE,
+                 ANY_VALUE(v.CAPACITY) AS CAPACITY,
+                 ANY_VALUE(v.PRICE) AS PRICE,
+                 ANY_VALUE(v.VEHICLE_IMG) AS VEHICLE_IMG,
+                 ANY_VALUE(v.AVAILABLE) AS AVAILABLE,
+                 COUNT(b.BOOK_ID) AS BOOK_COUNT
+                 FROM vehicles v
+                 LEFT JOIN booking b ON b.VEHICLE_ID = v.VEHICLE_ID AND b.BOOK_STATUS <> 'Canceled'
+                 WHERE v.AVAILABLE = 'Y'
+                 GROUP BY v.VEHICLE_ID
+                 ORDER BY BOOK_COUNT DESC, v.VEHICLE_ID DESC";
+*/
+
+if ($topResult = mysqli_query($con, $topBookedSql)) {
+    $byType = [];
+    while ($row = mysqli_fetch_assoc($topResult)) {
+        $typeKey = strtolower($row['VEHICLE_TYPE']);
+        // Only take the first (highest booked) vehicle per category with at least 1 booking
+        if (!isset($byType[$typeKey]) && (int)$row['BOOK_COUNT'] > 0) {
+            $byType[$typeKey] = $row;
+        }
+    }
+    $recommendedReturned = array_values($byType);
+}
+
+// Collect public reviews to display under vehicles
+mysqli_query($con, "CREATE TABLE IF NOT EXISTS reviews (
+    REVIEW_ID INT AUTO_INCREMENT PRIMARY KEY,
+    VEHICLE_ID INT NOT NULL,
+    EMAIL VARCHAR(255) NOT NULL,
+    COMMENT TEXT NOT NULL,
+    RATING TINYINT NULL,
+    CREATED_AT TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_vehicle (VEHICLE_ID),
+    INDEX idx_created (CREATED_AT)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+$reviewsByVehicle = [];
+$reviewsQuery = mysqli_query($con, "
+    SELECT r.VEHICLE_ID, r.COMMENT, r.RATING, r.CREATED_AT, u.FNAME, u.LNAME
+    FROM reviews r
+    LEFT JOIN users u 
+        ON r.EMAIL COLLATE utf8mb4_general_ci 
+       = u.EMAIL COLLATE utf8mb4_general_ci
+    ORDER BY r.CREATED_AT DESC
+");
+
+if ($reviewsQuery) {
+    while ($rev = mysqli_fetch_assoc($reviewsQuery)) {
+        $reviewsByVehicle[$rev['VEHICLE_ID']][] = $rev;
+    }
+}
+
+// Store vehicle data for display
+$vehicleData = [];
+while($result = mysqli_fetch_array($vehicles)) {
+    $vehicleData[] = $result;
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -15,7 +127,6 @@ $email = $_SESSION['email'];
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VEHICLE Details</title>
     
-    <!-- Using the remembered CSS from the login page (dark futuristic theme) -->
     <style>
         /* Reset and Base Styles */
         * {
@@ -447,12 +558,12 @@ $email = $_SESSION['email'];
         }
     </style>
 </head>
-<body class="body">
+   <body class="body">
 
 
 <?php 
     require_once('connection.php');
-    session_start();
+    
 
     // Require logged-in user and load their record; redirect if missing
     $value = isset($_SESSION['email']) ? $_SESSION['email'] : null;
@@ -486,47 +597,38 @@ $email = $_SESSION['email'];
     $vehicles = mysqli_query($con, $sql2);
     
     // Pull most booked vehicle per category (e.g., Car/Bike/Scooter) for recommendations
-    $recommendedReturned = [];
-    $topBookedSql = "SELECT v.*, COUNT(b.BOOK_ID) AS BOOK_COUNT
-                     FROM vehicles v
-                     LEFT JOIN booking b ON b.VEHICLE_ID = v.VEHICLE_ID AND b.BOOK_STATUS <> 'Canceled'
-                     GROUP BY v.VEHICLE_ID
-                     ORDER BY BOOK_COUNT DESC, v.VEHICLE_ID DESC";
+   $recommendedReturned = [];
 
-    if ($topResult = mysqli_query($con, $topBookedSql)) {
-        $byType = [];
-        while ($row = mysqli_fetch_assoc($topResult)) {
-            $typeKey = strtolower($row['VEHICLE_TYPE']);
-            // Only take the first (highest booked) vehicle per category with at least 1 booking
-            if (!isset($byType[$typeKey]) && (int)$row['BOOK_COUNT'] > 0) {
-                $byType[$typeKey] = $row;
-            }
-        }
-        $recommendedReturned = array_values($byType);
-    }
+$topBookedSql = "
+    SELECT v.*, IFNULL(bc.BOOK_COUNT, 0) AS BOOK_COUNT
+    FROM vehicles v
+    LEFT JOIN (
+        SELECT VEHICLE_ID, COUNT(*) AS BOOK_COUNT
+        FROM booking
+        WHERE BOOK_STATUS <> 'Canceled'
+        GROUP BY VEHICLE_ID
+    ) bc ON bc.VEHICLE_ID = v.VEHICLE_ID
+    WHERE v.AVAILABLE = 'Y'
+    ORDER BY BOOK_COUNT DESC, v.VEHICLE_ID DESC
+";
 
-    // Collect public reviews to display under vehicles
-    mysqli_query($con, "CREATE TABLE IF NOT EXISTS reviews (
-        REVIEW_ID INT AUTO_INCREMENT PRIMARY KEY,
-        VEHICLE_ID INT NOT NULL,
-        EMAIL VARCHAR(255) NOT NULL,
-        COMMENT TEXT NOT NULL,
-        RATING TINYINT NULL,
-        CREATED_AT TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        INDEX idx_vehicle (VEHICLE_ID),
-        INDEX idx_created (CREATED_AT)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+if ($topResult = mysqli_query($con, $topBookedSql)) {
+    $byType = [];
 
-    $reviewsByVehicle = [];
-    $reviewsQuery = mysqli_query($con, "SELECT r.VEHICLE_ID, r.COMMENT, r.RATING, r.CREATED_AT, u.FNAME, u.LNAME
-                                         FROM reviews r
-                                         LEFT JOIN users u ON r.EMAIL = u.EMAIL
-                                         ORDER BY r.CREATED_AT DESC");
-    if ($reviewsQuery) {
-        while ($rev = mysqli_fetch_assoc($reviewsQuery)) {
-            $reviewsByVehicle[$rev['VEHICLE_ID']][] = $rev;
+    while ($row = mysqli_fetch_assoc($topResult)) {
+        $typeKey = strtolower($row['VEHICLE_TYPE']);
+
+        // Only ONE top vehicle per category
+        if (!isset($byType[$typeKey]) && (int)$row['BOOK_COUNT'] > 0) {
+            $byType[$typeKey] = $row;
         }
     }
+
+    $recommendedReturned = array_values($byType);
+}
+
+
+    
 
     // Store vehicle data for display
     $vehicleData = [];
