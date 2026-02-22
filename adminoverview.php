@@ -129,7 +129,6 @@ footer{margin-left:200px;background:#fff;border-top:1px solid var(--border);padd
 <div class="actions">
     <a href="addvehicle.php">+ Add Vehicle</a>
     <a href="export.php">Export Report</a>
-    <a href="settings.php">Settings</a>
 </div>
 
 <!-- =========  REAL CHARTS  ========= -->
